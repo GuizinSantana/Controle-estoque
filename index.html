@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Controle de Estoque</title>
+
+<style>
+*{
+    box-sizing:border-box;
+    margin:0;
+    padding:0;
+    font-family:Arial, sans-serif;
+}
+
+body{
+    background:#f4f4f4;
+    padding:20px;
+}
+
+h1{
+    text-align:center;
+    margin-bottom:20px;
+}
+
+.top-bar{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    margin-bottom:20px;
+}
+
+.top-bar input,
+.top-bar select{
+    padding:10px;
+    border:1px solid #ccc;
+    border-radius:8px;
+}
+
+.top-bar input{
+    flex:1;
+}
+
+#container{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
+    gap:15px;
+}
+
+.card{
+    background:white;
+    border-radius:12px;
+    padding:15px;
+    box-shadow:0 2px 5px rgba(0,0,0,.15);
+}
+
+.card-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:15px;
+}
+
+.item-name{
+    font-weight:bold;
+    font-size:18px;
+}
+
+.gear{
+    cursor:pointer;
+    font-size:20px;
+}
+
+.counter{
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    gap:15px;
+    margin-bottom:15px;
+}
+
+.counter button{
+    width:40px;
+    height:40px;
+    font-size:20px;
+}
+
+.value{
+    font-size:28px;
+    font-weight:bold;
+    min-width:60px;
+    text-align:center;
+}
+
+.actions{
+    display:flex;
+    gap:10px;
+}
+
+.actions button{
+    flex:1;
+    padding:10px;
+}
+
+button{
+    border:none;
+    border-radius:8px;
+    cursor:pointer;
+}
+
+button:hover{
+    opacity:.9;
+}
+</style>
+</head>
+
+<body>
+
+<h1>Controle de Estoque</h1>
+
+<div class="top-bar">
+    <input type="text" id="search" placeholder="Pesquisar item...">
+
+    <select id="sort">
+        <option value="nameAsc">Nome A-Z</option>
+        <option value="nameDesc">Nome Z-A</option>
+        <option value="qtyDesc">Maior Quantidade</option>
+        <option value="qtyAsc">Menor Quantidade</option>
+    </select>
+
+    <select id="filter">
+        <option value="all">Todos</option>
+        <option value="zero">Zerados</option>
+        <option value="positive">Acima de 0</option>
+        <option value="below10">Abaixo de 10</option>
+        <option value="above100">Acima de 100</option>
+    </select>
+</div>
+
+<div id="container"></div>
+
+<!-- Firebase -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+import {
+    getDatabase,
+    ref,
+    set,
+    onValue
+} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCrSgho0Y05w8JBZze612-nt5DjMOfBUrs",
+  authDomain: "controle-estoque-c3001.firebaseapp.com",
+  databaseURL: "https://controle-estoque-c3001-default-rtdb.firebaseio.com",
+  projectId: "controle-estoque-c3001",
+  storageBucket: "controle-estoque-c3001.appspot.com",
+  messagingSenderId: "944420672508",
+  appId: "1:944420672508:web:e5f4ec0a3c498b2b2c1879",
+  measurementId: "G-0BYJFFKMKH"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+const DB_PATH = "estoque";
+
+let items = [];
+
+// ---------------- INIT (TEMPO REAL) ----------------
+function init() {
+
+    const dbRef = ref(db, DB_PATH);
+
+    onValue(dbRef, (snapshot) => {
+
+        if (snapshot.exists()) {
+            items = snapshot.val();
+        } else {
+
+            items = [];
+
+            for (let i = 1; i <= 200; i++) {
+                items.push({
+                    id: i,
+                    name: `Item ${i}`,
+                    qty: 0
+                });
+            }
+
+            set(dbRef, items);
+        }
+
+        render();
+    });
+}
+
+// ---------------- SAVE ----------------
+function save() {
+    set(ref(db, DB_PATH), items);
+}
+
+// ---------------- FIND ----------------
+function find(id) {
+    return items.find(i => i.id === id);
+}
+
+// ---------------- RENDER ----------------
+function render() {
+
+    const search = document.getElementById("search").value.toLowerCase();
+    const sort = document.getElementById("sort").value;
+    const filter = document.getElementById("filter").value;
+
+    let list = [...items];
+
+    list = list.filter(item =>
+        item.name.toLowerCase().includes(search)
+    );
+
+    switch (filter) {
+        case "zero":
+            list = list.filter(i => i.qty === 0);
+            break;
+        case "positive":
+            list = list.filter(i => i.qty > 0);
+            break;
+        case "below10":
+            list = list.filter(i => i.qty < 10);
+            break;
+        case "above100":
+            list = list.filter(i => i.qty > 100);
+            break;
+    }
+
+    switch (sort) {
+        case "nameAsc":
+            list.sort((a, b) =>
+                a.name.localeCompare(b.name, undefined, { numeric: true })
+            );
+            break;
+        case "nameDesc":
+            list.sort((a, b) =>
+                b.name.localeCompare(a.name, undefined, { numeric: true })
+            );
+            break;
+        case "qtyAsc":
+            list.sort((a, b) => a.qty - b.qty);
+            break;
+        case "qtyDesc":
+            list.sort((a, b) => b.qty - a.qty);
+            break;
+    }
+
+    const container = document.getElementById("container");
+    container.innerHTML = "";
+
+    list.forEach(item => {
+
+        const card = document.createElement("div");
+        card.className = "card";
+
+        card.innerHTML = `
+            <div class="card-header">
+                <span class="item-name">${item.name}</span>
+                <span class="gear" onclick="renameItem(${item.id})">⚙️</span>
+            </div>
+
+            <div class="counter">
+                <button onclick="changeQty(${item.id},-1)">−</button>
+                <div class="value">${item.qty}</div>
+                <button onclick="changeQty(${item.id},1)">+</button>
+            </div>
+
+            <div class="actions">
+                <button onclick="addAmount(${item.id})">Adicionar</button>
+                <button onclick="removeAmount(${item.id})">Retirar</button>
+            </div>
+        `;
+
+        container.appendChild(card);
+    });
+}
+
+// ---------------- ACTIONS ----------------
+function changeQty(id, value) {
+    const item = find(id);
+    item.qty += value;
+    if (item.qty < 0) item.qty = 0;
+
+    save();
+}
+
+function addAmount(id) {
+    const amount = parseInt(prompt("Quantidade para adicionar:"));
+    if (isNaN(amount) || amount <= 0) return;
+
+    find(id).qty += amount;
+
+    save();
+}
+
+function removeAmount(id) {
+    const amount = parseInt(prompt("Quantidade para retirar:"));
+    if (isNaN(amount) || amount <= 0) return;
+
+    const item = find(id);
+    item.qty -= amount;
+
+    if (item.qty < 0) item.qty = 0;
+
+    save();
+}
+
+function renameItem(id) {
+    const item = find(id);
+
+    const newName = prompt("Novo nome:", item.name);
+    if (!newName || !newName.trim()) return;
+
+    item.name = newName.trim();
+
+    save();
+}
+
+// ---------------- EVENTS ----------------
+document.getElementById("search").addEventListener("input", render);
+document.getElementById("sort").addEventListener("change", render);
+document.getElementById("filter").addEventListener("change", render);
+
+// ---------------- GLOBAL ----------------
+window.changeQty = changeQty;
+window.addAmount = addAmount;
+window.removeAmount = removeAmount;
+window.renameItem = renameItem;
+
+// ---------------- START ----------------
+init();
+
+</script>
+
+</body>
+</html>
