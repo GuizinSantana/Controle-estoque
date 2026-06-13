@@ -19,6 +19,7 @@
 body{
     background:#e9eef7;
     padding:15px;
+    position:relative;
 }
 
 /* ================= LOGIN ================= */
@@ -46,7 +47,7 @@ body{
     left:50%;
     top:50%;
 
-    transform:translate(-50%, 80px);
+    transform:translate(-50%,80px);
 
     width:min(820px,85vw);
 }
@@ -70,15 +71,6 @@ body{
     font-size:34px;
 
     padding-left:35px;
-
-    transition:.2s;
-}
-
-#passwordInput:focus{
-
-    border-color:white;
-
-    background:rgba(255,255,255,.08);
 }
 
 #passwordInput::placeholder{
@@ -121,22 +113,32 @@ body{
     font-weight:bold;
 }
 
-/* ================= TOPO ================= */
+/* ================= LOGO TOPO ================= */
 
 #topLogo{
 
-    width:180px;
+    position:absolute;
 
-    display:block;
+    top:10px;
 
-    margin-bottom:15px;
+    left:10px;
+
+    width:95px;
+
+    height:auto;
+
+    object-fit:contain;
 }
+
+/* ================= TÍTULO ================= */
 
 h1{
 
+    text-align:center;
+
     color:#002b73;
 
-    margin-bottom:20px;
+    margin-bottom:25px;
 
     font-size:34px;
 }
@@ -173,7 +175,6 @@ h1{
 }
 
 .top-bar input{
-
     flex:1;
 }
 
@@ -351,7 +352,8 @@ h1{
     }
 
     #topLogo{
-        width:140px;
+
+        width:70px;
     }
 
     #passwordArea{
@@ -378,7 +380,10 @@ h1{
     }
 
     h1{
+
         font-size:26px;
+
+        margin-top:10px;
     }
 
     .top-bar{
@@ -404,7 +409,7 @@ h1{
 
 <body>
 
-<!-- ================= LOGIN ================= -->
+<!-- LOGIN -->
 
 <div id="loginScreen">
 
@@ -429,10 +434,10 @@ h1{
 
 </div>
 
-<!-- ================= APP ================= -->
+<!-- APP -->
 
 <img
-    src="login-bimbo.png"
+    src="bimbo-logo.png"
     id="topLogo"
 >
 
@@ -516,14 +521,11 @@ const DB_PATH = "estoque";
 const ACCESS_PASSWORD =
 "Almoxarifado@Bimbo2026";
 
-const LOGIN_TIME =
-3 * 60 * 60 * 1000;
-
 let items = [];
 
 let initialized = false;
 
-/* ================= LOGIN ================= */
+/* LOGIN */
 
 function checkPassword(){
 
@@ -533,8 +535,8 @@ function checkPassword(){
     if(input === ACCESS_PASSWORD){
 
         sessionStorage.setItem(
-            "bimboAuthTime",
-            Date.now()
+            "bimboLogged",
+            "true"
         );
 
         document
@@ -566,29 +568,20 @@ document.addEventListener("keydown",(e)=>{
 
 });
 
-/* ================= AUTO LOGIN ================= */
+/* AUTO LOGIN */
 
-const savedLogin =
-sessionStorage.getItem("bimboAuthTime");
+if(sessionStorage.getItem("bimboLogged")){
 
-if(savedLogin){
+    document
+    .getElementById("loginScreen")
+    .style.display = "none";
 
-    const diff =
-    Date.now() - Number(savedLogin);
+    init();
 
-    if(diff < LOGIN_TIME){
-
-        document
-        .getElementById("loginScreen")
-        .style.display = "none";
-
-        init();
-
-        initialized = true;
-    }
+    initialized = true;
 }
 
-/* ================= INIT ================= */
+/* INIT */
 
 function init(){
 
@@ -609,9 +602,7 @@ function init(){
                 items.push({
 
                     id:i,
-
                     name:`Item ${i}`,
-
                     qty:0
                 });
             }
@@ -623,7 +614,7 @@ function init(){
     });
 }
 
-/* ================= SAVE ================= */
+/* SAVE */
 
 function save(){
 
@@ -633,14 +624,14 @@ function save(){
     );
 }
 
-/* ================= FIND ================= */
+/* FIND */
 
 function find(id){
 
     return items.find(i => i.id === id);
 }
 
-/* ================= RENDER ================= */
+/* RENDER */
 
 function render(){
 
@@ -784,7 +775,7 @@ function render(){
     });
 }
 
-/* ================= ACTIONS ================= */
+/* ACTIONS */
 
 function changeQty(id,value){
 
@@ -853,7 +844,7 @@ function renameItem(id){
     save();
 }
 
-/* ================= EVENTS ================= */
+/* EVENTS */
 
 document
 .getElementById("search")
@@ -867,7 +858,7 @@ document
 .getElementById("filter")
 .addEventListener("change",render);
 
-/* ================= GLOBAL ================= */
+/* GLOBAL */
 
 window.changeQty = changeQty;
 
