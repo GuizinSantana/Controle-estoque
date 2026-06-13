@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Controle de Estoque</title>
+
+<style>
+*{
+    box-sizing:border-box;
+    margin:0;
+    padding:0;
+    font-family:Arial, sans-serif;
+}
+
+body{
+    background:#f4f4f4;
+    padding:20px;
+}
+
+h1{
+    text-align:center;
+    margin-bottom:20px;
+}
+
+.top-bar{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    margin-bottom:20px;
+}
+
+.top-bar input,
+.top-bar select{
+    padding:10px;
+    border:1px solid #ccc;
+    border-radius:8px;
+}
+
+.top-bar input{
+    flex:1;
+}
+
+#container{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
+    gap:15px;
+}
+
+.card{
+    background:white;
+    border-radius:12px;
+    padding:15px;
+    box-shadow:0 2px 5px rgba(0,0,0,.15);
+}
+
+.card-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:15px;
+}
+
+.item-name{
+    font-weight:bold;
+    font-size:18px;
+}
+
+.gear{
+    cursor:pointer;
+    font-size:20px;
+}
+
+.counter{
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    gap:15px;
+    margin-bottom:15px;
+}
+
+.counter button{
+    width:40px;
+    height:40px;
+    font-size:20px;
+}
+
+.value{
+    font-size:28px;
+    font-weight:bold;
+    min-width:60px;
+    text-align:center;
+}
+
+.actions{
+    display:flex;
+    gap:10px;
+}
+
+.actions button{
+    flex:1;
+    padding:10px;
+}
+
+button{
+    border:none;
+    border-radius:8px;
+    cursor:pointer;
+}
+
+button:hover{
+    opacity:.9;
+}
+
+/* --- Tela de Login com Fundo Bimbo Real --- */
+#login-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-image: url('https://squarespace-cdn.com');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+.login-box {
+    width: 100%;
+    max-width: 440px;
+    padding: 20px;
+    text-align: center;
+    margin-top: 50px; /* Alinha o box sobre o container azul escuro da imagem */
+}
+
+.login-box input {
+    width: 82%;
+    padding: 12px 15px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(0, 0, 0, 0.2);
+    color: white;
+    border-radius: 6px;
+    font-size: 16px;
+    outline: none;
+    margin-bottom: 25px;
+    text-align: center;
+}
+
+.login-box input::placeholder {
+    color: #94a3b8;
+}
+
+.btn-login {
+    width: 82%;
+    padding: 14px;
+    background: #e41b13;
+    color: white;
+    font-weight: bold;
+    font-size: 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+}
+
+.error-msg {
+    color: #ff8a8a;
+    font-size: 14px;
+    font-weight: bold;
+    margin-top: 15px;
+    display: none;
+}
+</style>
+</head>
+<body>
+
+<div id="login-screen">
+    <div class="login-box">
+        <!-- Input e botão posicionados milimetricamente sobre a imagem de fundo -->
+        <input type="password" id="login-password" placeholder="Senha" onkeypress="handleEnter(event)">
+        <br>
+        <button class="btn-login" onclick="checkPassword()">ENTRAR</button>
+        <div class="error-msg" id="login-error">Senha incorreta. Tente novamente.</div>
+    </div>
+</div>
+
+<h1>Controle de Estoque</h1>
+
+<div class="top-bar">
+    <input type="text" id="search" placeholder="Pesquisar item...">
+
+    <select id="sort">
+        <option value="nameAsc">Nome A-Z</option>
+        <option value="nameDesc">Nome Z-A</option>
+        <option value="qtyDesc">Maior Quantidade</option>
+        <option value="qtyAsc">Menor Quantidade</option>
+    </select>
+
+    <select id="filter">
+        <option value="all">Todos</option>
+        <option value="zero">Zerados</option>
+        <option value="positive">Acima de 0</option>
+        <option value="below10">Abaixo de 10</option>
+        <option value="above100">Acima de 100</option>
+    </select>
+</div>
+
+<div id="container"></div>
+<script type="module">
+import { initializeApp } from "https://gstatic.com";
+import { getDatabase, ref, set, onValue } from "https://gstatic.com";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCrSgho0Y05w8JBZze612-nt5DjMOfBUrs",
+  authDomain: "://firebaseapp.com",
+  databaseURL: "https://firebaseio.com",
+  projectId: "controle-estoque-c3001",
+  storageBucket: "://appspot.com",
+  messagingSenderId: "944420672508",
+  appId: "1:944420672508:web:e5f4ec0a3c498b2b2c1879"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+const DB_PATH = "estoque";
+
+let items = [];
+
+function init() {
+    const dbRef = ref(db, DB_PATH);
+    onValue(dbRef, (snapshot) => {
+        const data = snapshot.val();
+        if (data && Array.isArray(data)) {
+            items = data;
+        } else {
+            items = [];
+            for (let i = 1; i <= 200; i++) {
+                items.push({ id: i, name: `Item ${i}`, qty: 0 });
+            }
+            set(dbRef, items);
+        }
+        render();
+    });
+}
+
+function save() {
+    set(ref(db, DB_PATH), items);
+}
+
+function find(id) {
+    return items.find(i => i.id === id);
+}
+
+function render() {
+    const search = document.getElementById("search").value.toLowerCase();
+    const sort = document.getElementById("sort").value;
+    const filter = document.getElementById("filter").value;
+
+    let list = [...items];
+    list = list.filter(i => i.name.toLowerCase().includes(search));
+
+    if (filter === "zero") list = list.filter(i => i.qty === 0);
+    if (filter === "positive") list = list.filter(i => i.qty > 0);
+    if (filter === "below10") list = list.filter(i => i.qty < 10);
+    if (filter === "above100") list = list.filter(i => i.qty > 100);
+
+    if (sort === "nameAsc") {
+        list.sort((a,b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+    }
+    if (sort === "nameDesc") {
+        list.sort((a,b) => b.name.localeCompare(a.name, undefined, { numeric: true, sensitivity: 'base' }));
+    }
+    if (sort === "qtyAsc") {
+        list.sort((a,b) => a.qty - b.qty);
+    }
+    if (sort === "qtyDesc") {
+        list.sort((a,b) => b.qty - a.qty);
+    }
+
+    const container = document.getElementById("container");
+    container.innerHTML = "";
+
+    list.forEach(item => {
+        const card = document.createElement("div");
+        card.className = "card";
+        card.innerHTML = `
+            <div class="card-header">
+                <span class="item-name">${item.name}</span>
+                <span class="gear" onclick="renameItem(${item.id})">⚙️</span>
+            </div>
+            <div class="counter">
+                <button onclick="changeQty(${item.id},-1)">−</button>
+                <div class="value">${item.qty}</div>
+                <button onclick="changeQty(${item.id},1)">+</button>
+            </div>
+            <div class="actions">
+                <button onclick="addAmount(${item.id})">Adicionar</button>
+                <button onclick="removeAmount(${item.id})">Retirar</button>
+            </div>
+        `;
+        container.appendChild(card);
+    });
+}
+
+function changeQty(id, value) {
+    const item = find(id);
+    item.qty = Math.max(0, item.qty + value);
+    save();
+}
+
+function addAmount(id) {
+    const amount = parseInt(prompt("Quantidade para adicionar:"));
+    if (amount > 0) {
+        find(id).qty += amount;
+        save();
+    }
+}
+
+function removeAmount(id) {
+    const amount = parseInt(prompt("Quantidade para retirar:"));
+    if (amount > 0) {
+        find(id).qty = Math.max(0, find(id).qty - amount);
+        save();
+    }
+}
+
+function renameItem(id) {
+    const item = find(id);
+    const newName = prompt("Novo nome:", item.name);
+    if (newName?.trim()) {
+        item.name = newName.trim();
+        save();
+    }
+}
+
+// VALIDAÇÃO EXPORTADA DE FORMA GLOBAL COMPATÍVEL
+function checkPassword() {
+    const pass = document.getElementById("login-password").value;
+    const err = document.getElementById("login-error");
+    if (pass === "Almoxarifado@Bimbo2026") {
+        document.getElementById("login-screen").style.display = "none";
+    } else {
+        err.style.display = "block";
+    }
+}
+
+function handleEnter(e) {
+    if (e.key === "Enter") checkPassword();
+}
+
+document.getElementById("search").addEventListener("input", render);
+document.getElementById("sort").addEventListener("change", render);
+document.getElementById("filter").addEventListener("change", render);
+
+window.changeQty = changeQty;
+window.addAmount = addAmount;
+window.removeAmount = removeAmount;
+window.renameItem = renameItem;
+window.checkPassword = checkPassword;
+window.handleEnter = handleEnter;
+
+init();
+</script>
+</body>
+</html>
