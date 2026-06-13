@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Controle de Estoque</title>
+
+<style>
+
+*{
+    box-sizing:border-box;
+    margin:0;
+    padding:0;
+    font-family:Arial,sans-serif;
+}
+
+body{
+    background:#e9eef7;
+    padding:15px;
+}
+
+/* ================= LOGIN ================= */
+
+#loginScreen{
+
+    position:fixed;
+    inset:0;
+
+    background:#0037b3;
+
+    background-image:url("login-bimbo.png");
+
+    background-size:cover;
+    background-position:center;
+    background-repeat:no-repeat;
+
+    z-index:99999;
+}
+
+#passwordArea{
+
+    position:absolute;
+
+    left:50%;
+    top:50%;
+
+    transform:translate(-50%, 80px);
+
+    width:min(820px,85vw);
+}
+
+#passwordInput{
+
+    width:100%;
+
+    height:92px;
+
+    background:rgba(0,0,0,.12);
+
+    border:2px solid rgba(255,255,255,.45);
+
+    border-radius:18px;
+
+    outline:none;
+
+    color:white;
+
+    font-size:34px;
+
+    padding-left:35px;
+
+    transition:.2s;
+}
+
+#passwordInput:focus{
+
+    border-color:white;
+
+    background:rgba(255,255,255,.08);
+}
+
+#passwordInput::placeholder{
+    color:rgba(255,255,255,.75);
+}
+
+/* BOTÃO LOGIN */
+
+#loginBtn{
+
+    width:100%;
+
+    height:90px;
+
+    margin-top:28px;
+
+    border:none;
+
+    border-radius:18px;
+
+    background:#e4001b;
+
+    color:white;
+
+    font-size:38px;
+
+    font-weight:bold;
+
+    cursor:pointer;
+
+    transition:.2s;
+}
+
+#loginBtn:hover{
+    opacity:.95;
+}
+
+#errorMsg{
+
+    margin-top:18px;
+
+    text-align:center;
+
+    color:#ffd2d2;
+
+    font-size:22px;
+
+    font-weight:bold;
+}
+
+/* ================= LOGO TOPO ================= */
+
+#topLogo{
+
+    width:180px;
+
+    display:block;
+
+    margin-bottom:15px;
+}
+
+/* ================= APP ================= */
+
+h1{
+
+    margin-bottom:22px;
+
+    font-size:34px;
+
+    color:#002b73;
+}
+
+/* TOP BAR */
+
+.top-bar{
+
+    display:flex;
+
+    flex-wrap:wrap;
+
+    gap:10px;
+
+    margin-bottom:20px;
+}
+
+.top-bar input,
+.top-bar select{
+
+    padding:12px;
+
+    border:2px solid #0b4fb3;
+
+    border-radius:12px;
+
+    font-size:16px;
+
+    background:white;
+
+    color:#001b44;
+
+    font-weight:bold;
+
+    box-shadow:0 2px 6px rgba(0,0,0,.08);
+}
+
+.top-bar input::placeholder{
+
+    color:#5b6f8f;
+}
+
+.top-bar input{
+    flex:1;
+}
+
+/* GRID */
+
+#container{
+
+    display:grid;
+
+    grid-template-columns:
+        repeat(auto-fill,minmax(280px,1fr));
+
+    gap:16px;
+}
+
+/* CARD */
+
+.card{
+
+    background:linear-gradient(
+        180deg,
+        #0f4fb8,
+        #002b73
+    );
+
+    border-radius:18px;
+
+    padding:16px;
+
+    box-shadow:0 4px 12px rgba(0,0,0,.22);
+
+    border:1px solid rgba(255,255,255,.12);
+}
+
+/* HEADER */
+
+.card-header{
+
+    display:flex;
+
+    justify-content:space-between;
+
+    align-items:center;
+
+    margin-bottom:16px;
+}
+
+.item-name{
+
+    font-weight:bold;
+
+    font-size:20px;
+
+    color:white;
+}
+
+.gear{
+
+    cursor:pointer;
+
+    font-size:22px;
+
+    color:white;
+}
+
+/* CONTADOR */
+
+.counter{
+
+    display:flex;
+
+    justify-content:center;
+
+    align-items:center;
+
+    gap:15px;
+
+    margin-bottom:16px;
+}
+
+/* BOTÕES + E - */
+
+.counter button{
+
+    width:48px;
+
+    height:48px;
+
+    font-size:24px;
+
+    font-weight:bold;
+
+    color:white;
+
+    border-radius:14px;
+
+    transition:.2s;
+}
+
+/* BOTÃO MENOS */
+
+.counter button:first-child{
+
+    background:#d91c1c;
+}
+
+/* BOTÃO MAIS */
+
+.counter button:last-child{
+
+    background:#00b140;
+}
+
+.counter button:hover{
+
+    transform:scale(1.05);
+}
+
+/* NÚMERO */
+
+.value{
+
+    font-size:32px;
+
+    font-weight:bold;
+
+    min-width:85px;
+
+    text-align:center;
+
+    background:#001c4a;
+
+    color:white;
+
+    padding:10px 16px;
+
+    border-radius:14px;
+
+    border:2px solid #2f7fff;
+}
+
+/* AÇÕES */
+
+.actions{
+
+    display:flex;
+
+    gap:10px;
+}
+
+.actions button{
+
+    flex:1;
+
+    padding:12px;
+
+    font-size:15px;
+
+    font-weight:bold;
+
+    color:white;
+
+    border-radius:12px;
+
+    transition:.2s;
+}
+
+.actions button:first-child{
+
+    background:#12a150;
+}
+
+.actions button:last-child{
+
+    background:#d91c1c;
+}
+
+.actions button:hover{
+
+    transform:translateY(-1px);
+}
+
+/* BOTÕES GERAIS */
+
+button{
+
+    border:none;
+
+    cursor:pointer;
+}
+
+button:hover{
+    opacity:.94;
+}
+
+/* ================= MOBILE ================= */
+
+@media(max-width:768px){
+
+    body{
+        padding:10px;
+    }
+
+    #topLogo{
+
+        width:140px;
+    }
+
+    #passwordArea{
+
+        width:88vw;
+
+        transform:translate(-50%, 55px);
+    }
+
+    #passwordInput{
+
+        height:68px;
+
+        font-size:24px;
+
+        border-radius:14px;
+
+        padding-left:22px;
+    }
+
+    #loginBtn{
+
+        height:66px;
+
+        margin-top:18px;
+
+        font-size:28px;
+
+        border-radius:14px;
+    }
+
+    #errorMsg{
+
+        font-size:18px;
+    }
+
+    h1{
+        font-size:26px;
+    }
+
+    .top-bar{
+
+        flex-direction:column;
+    }
+
+    .top-bar input,
+    .top-bar select{
+
+        width:100%;
+    }
+
+    #container{
+
+        grid-template-columns:1fr;
+    }
+
+    .card{
+
+        padding:14px;
+    }
+
+    .item-name{
+
+        font-size:18px;
+    }
+
+    .value{
+
+        font-size:28px;
+    }
+
+}
+
+</style>
+</head>
+
+<body>
+
+<!-- ================= LOGIN ================= -->
+
+<div id="loginScreen">
+
+    <div id="passwordArea">
+
+        <input
+            type="password"
+            id="passwordInput"
+            placeholder="Digite a senha"
+        >
+
+        <button
+            id="loginBtn"
+            onclick="checkPassword()"
+        >
+            ENTRAR
+        </button>
+
+        <div id="errorMsg"></div>
+
+    </div>
+
+</div>
+
+<!-- ================= APP ================= -->
+
+<img
+    src="login-bimbo.png"
+    id="topLogo"
+>
+
+<h1>Controle de Estoque</h1>
+
+<div class="top-bar">
+
+    <input
+        type="text"
+        id="search"
+        placeholder="Pesquisar item..."
+    >
+
+    <select id="sort">
+
+        <option value="nameAsc">
+            Nome A-Z
+        </option>
+
+        <option value="nameDesc">
+            Nome Z-A
+        </option>
+
+        <option value="qtyDesc">
+            Maior Quantidade
+        </option>
+
+        <option value="qtyAsc">
+            Menor Quantidade
+        </option>
+
+    </select>
+
+    <select id="filter">
+
+        <option value="all">
+            Todos
+        </option>
+
+        <option value="zero">
+            Zerados
+        </option>
+
+        <option value="positive">
+            Acima de 0
+        </option>
+
+        <option value="below10">
+            Abaixo de 10
+        </option>
+
+        <option value="above100">
+            Acima de 100
+        </option>
+
+    </select>
+
+</div>
+
+<div id="container"></div>
+
+</body>
+</html>
