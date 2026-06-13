@@ -113,34 +113,75 @@ body{
     font-weight:bold;
 }
 
-/* ================= LOGO TOPO ================= */
+/* ================= TOPO ================= */
+
+#titleArea{
+
+    position:relative;
+
+    display:flex;
+
+    justify-content:center;
+
+    align-items:center;
+
+    margin-bottom:28px;
+
+    padding-top:8px;
+}
 
 #topLogo{
 
     position:absolute;
 
-    top:10px;
+    left:0;
 
-    left:10px;
-
-    width:95px;
+    width:78px;
 
     height:auto;
 
     object-fit:contain;
 }
 
-/* ================= TÍTULO ================= */
-
-h1{
+#titles{
 
     text-align:center;
+}
+
+#mainTitle{
 
     color:#002b73;
 
-    margin-bottom:25px;
+    font-size:42px;
 
-    font-size:34px;
+    line-height:1;
+
+    letter-spacing:1px;
+
+    text-transform:uppercase;
+
+    font-family:
+        Impact,
+        "Arial Black",
+        sans-serif;
+
+    text-shadow:
+        0 2px 0 rgba(255,255,255,.5);
+}
+
+#subTitle{
+
+    margin-top:6px;
+
+    color:#4b5f86;
+
+    font-size:14px;
+
+    font-weight:bold;
+
+    letter-spacing:.8px;
+
+    text-transform:uppercase;
 }
 
 /* ================= FILTROS ================= */
@@ -351,9 +392,28 @@ h1{
         padding:10px;
     }
 
+    #titleArea{
+
+        margin-bottom:20px;
+
+        padding-top:4px;
+    }
+
     #topLogo{
 
-        width:70px;
+        width:52px;
+    }
+
+    #mainTitle{
+
+        font-size:26px;
+    }
+
+    #subTitle{
+
+        font-size:10px;
+
+        margin-top:4px;
     }
 
     #passwordArea{
@@ -377,13 +437,6 @@ h1{
         height:66px;
 
         font-size:28px;
-    }
-
-    h1{
-
-        font-size:26px;
-
-        margin-top:10px;
     }
 
     .top-bar{
@@ -436,12 +489,26 @@ h1{
 
 <!-- APP -->
 
-<img
-    src="bimbo-logo.png"
-    id="topLogo"
->
+<div id="titleArea">
 
-<h1>Controle de Estoque</h1>
+    <img
+        src="bimbo-logo.png"
+        id="topLogo"
+    >
+
+    <div id="titles">
+
+        <h1 id="mainTitle">
+            Controle de Estoque
+        </h1>
+
+        <p id="subTitle">
+            Almoxarifado de Manutenção
+        </p>
+
+    </div>
+
+</div>
 
 <div class="top-bar">
 
