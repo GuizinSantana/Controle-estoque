@@ -99,7 +99,7 @@ body{
     text-align:center;
 }
 
-/* TÍTULO PRINCIPAL (NÃO QUEBRA LINHA) */
+/* TÍTULO PRINCIPAL */
 .title-container h1{
     color:#002b73;
     font-size:34px;
@@ -382,6 +382,7 @@ const ACCESS_PASSWORD = "Almoxarifado@Bimbo2026";
 let items = [];
 let initialized = false;
 
+/* LOGIN */
 function checkPassword(){
 
     const input = document.getElementById("passwordInput").value;
@@ -414,6 +415,7 @@ if(sessionStorage.getItem("bimboLogged")){
     initialized = true;
 }
 
+/* INIT */
 function init(){
 
     const dbRef = ref(db, DB_PATH);
@@ -444,6 +446,7 @@ function find(id){
     return items.find(i=>i.id===id);
 }
 
+/* RENDER */
 function render(){
 
     const search = document.getElementById("search").value.toLowerCase();
@@ -464,15 +467,29 @@ function render(){
     }
 
     switch(sort){
+
         case "nameAsc":
-            list.sort((a,b)=>a.name.localeCompare(b.name,{numeric:true}));
+            list.sort((a,b)=>
+                a.name.localeCompare(b.name, undefined, {
+                    numeric:true,
+                    sensitivity:"base"
+                })
+            );
             break;
+
         case "nameDesc":
-            list.sort((a,b)=>b.name.localeCompare(a.name,{numeric:true}));
+            list.sort((a,b)=>
+                b.name.localeCompare(a.name, undefined, {
+                    numeric:true,
+                    sensitivity:"base"
+                })
+            );
             break;
+
         case "qtyAsc":
             list.sort((a,b)=>a.qty-b.qty);
             break;
+
         case "qtyDesc":
             list.sort((a,b)=>b.qty-a.qty);
             break;
@@ -509,6 +526,7 @@ function render(){
     });
 }
 
+/* ACTIONS */
 function changeQty(id,v){
     const item = find(id);
     item.qty += v;
@@ -540,6 +558,7 @@ function renameItem(id){
     save();
 }
 
+/* EVENTS */
 document.getElementById("search").addEventListener("input",render);
 document.getElementById("sort").addEventListener("change",render);
 document.getElementById("filter").addEventListener("change",render);
