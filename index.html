@@ -19,48 +19,36 @@
 body{
     background:#e9eef7;
     padding:15px;
-    position:relative;
 }
 
 /* ================= LOGIN ================= */
 
 #loginScreen{
-
     position:fixed;
     inset:0;
-
     background:#0037b3;
     background-image:url("login-bimbo.png");
     background-size:cover;
     background-position:center;
     background-repeat:no-repeat;
-
     z-index:99999;
 }
 
 #passwordArea{
-
     position:absolute;
-
     left:50%;
     top:50%;
-
     transform:translate(-50%,80px);
-
     width:min(820px,85vw);
 }
 
 #passwordInput{
-
     width:100%;
     height:92px;
-
     background:rgba(0,0,0,.12);
     border:2px solid rgba(255,255,255,.45);
     border-radius:18px;
-
     outline:none;
-
     color:white;
     font-size:34px;
     padding-left:35px;
@@ -71,21 +59,15 @@ body{
 }
 
 #loginBtn{
-
     width:100%;
     height:90px;
-
     margin-top:28px;
-
     border:none;
     border-radius:18px;
-
     background:#e4001b;
-
     color:white;
     font-size:38px;
     font-weight:bold;
-
     cursor:pointer;
 }
 
@@ -97,33 +79,48 @@ body{
     font-weight:bold;
 }
 
-/* ================= HEADER (CORREÇÃO PRINCIPAL) ================= */
+/* ================= HEADER ================= */
 
 .header{
     display:flex;
     align-items:center;
-    justify-content:center;
-    gap:15px;
-    flex-wrap:wrap;
+    justify-content:space-between;
+    position:relative;
     margin-bottom:25px;
 }
 
+/* LOGO ESQUERDA */
 #topLogo{
-    width:95px;
+    width:85px;
     height:auto;
 }
 
-h1{
+/* TÍTULO CENTRAL ABSOLUTO */
+.title-container{
+    position:absolute;
+    left:50%;
+    transform:translateX(-50%);
     text-align:center;
+}
+
+/* TÍTULO PRINCIPAL */
+.title-container h1{
     color:#002b73;
     font-size:34px;
     margin:0;
 }
 
-/* ================= FILTROS ================= */
+/* SUBTÍTULO */
+.title-container h2{
+    font-size:16px;
+    color:#3b5ea8;
+    margin-top:4px;
+    font-weight:normal;
+}
+
+/* ================= TOP BAR ================= */
 
 .top-bar{
-
     display:flex;
     flex-wrap:wrap;
     gap:10px;
@@ -132,7 +129,6 @@ h1{
 
 .top-bar input,
 .top-bar select{
-
     padding:12px;
     border:2px solid #0f4fb8;
     border-radius:12px;
@@ -257,17 +253,16 @@ h1{
         padding:10px;
     }
 
-    .header{
-        flex-direction:column;
-        gap:8px;
-    }
-
     #topLogo{
-        width:70px;
+        width:65px;
     }
 
-    h1{
+    .title-container h1{
         font-size:26px;
+    }
+
+    .title-container h2{
+        font-size:13px;
     }
 
     #passwordArea{
@@ -312,9 +307,7 @@ h1{
 
         <input type="password" id="passwordInput" placeholder="Digite a senha">
 
-        <button id="loginBtn" onclick="checkPassword()">
-            ENTRAR
-        </button>
+        <button id="loginBtn" onclick="checkPassword()">ENTRAR</button>
 
         <div id="errorMsg"></div>
 
@@ -322,15 +315,22 @@ h1{
 
 </div>
 
-<!-- APP HEADER CORRIGIDO -->
+<!-- HEADER FINAL -->
 <div class="header">
 
     <img src="bimbo-logo.png" id="topLogo">
 
-    <h1>Controle de Estoque</h1>
+    <div class="title-container">
+
+        <h1>Controle de Estoque</h1>
+
+        <h2>Almoxarifado de Manutenção</h2>
+
+    </div>
 
 </div>
 
+<!-- TOP BAR -->
 <div class="top-bar">
 
     <input type="text" id="search" placeholder="Pesquisar item...">
@@ -407,9 +407,7 @@ function checkPassword(){
 window.checkPassword = checkPassword;
 
 document.addEventListener("keydown",(e)=>{
-    if(e.key === "Enter"){
-        checkPassword();
-    }
+    if(e.key === "Enter") checkPassword();
 });
 
 if(sessionStorage.getItem("bimboLogged")){
@@ -488,6 +486,7 @@ function render(){
     list.forEach(item=>{
 
         const card = document.createElement("div");
+
         card.className = "card";
 
         card.innerHTML = `
