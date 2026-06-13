@@ -466,24 +466,19 @@ function render(){
         case "above100": list = list.filter(i=>i.qty>100); break;
     }
 
+    const collator = new Intl.Collator(undefined, {
+        numeric: true,
+        sensitivity: "base"
+    });
+
     switch(sort){
 
         case "nameAsc":
-            list.sort((a,b)=>
-                a.name.localeCompare(b.name, undefined, {
-                    numeric:true,
-                    sensitivity:"base"
-                })
-            );
+            list.sort((a,b) => collator.compare(a.name, b.name));
             break;
 
         case "nameDesc":
-            list.sort((a,b)=>
-                b.name.localeCompare(a.name, undefined, {
-                    numeric:true,
-                    sensitivity:"base"
-                })
-            );
+            list.sort((a,b) => collator.compare(b.name, a.name));
             break;
 
         case "qtyAsc":
