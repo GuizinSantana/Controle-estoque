@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 
@@ -242,6 +243,31 @@ body{
     background:#d91c1c;
 }
 
+#addItemBtn{
+    background:#001c4a;
+    color:white;
+    border:none;
+    border-radius:12px;
+    padding:12px 20px;
+    font-size:16px;
+    font-weight:bold;
+    cursor:pointer;
+}
+
+.delete-item{
+    width:34px;
+    height:34px;
+    border-radius:50%;
+    border:2px solid white;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    font-size:18px;
+    font-weight:bold;
+    color:white;
+}
+
 /* ================= MOBILE ================= */
 
 @media(max-width:768px){
@@ -347,6 +373,8 @@ body{
         <option value="below10">Abaixo de 10</option>
         <option value="above100">Acima de 100</option>
     </select>
+
+    <button id="addItemBtn" onclick="createItem()">+ Novo Item</button>
 
 </div>
 
@@ -502,7 +530,10 @@ function render(){
         card.innerHTML = `
             <div class="card-header">
                 <span class="item-name">${item.name}</span>
-                <span class="gear" onclick="renameItem(${item.id})">⚙️</span>
+                <div style="display:flex;gap:10px;align-items:center;">
+                    <span class="gear" onclick="renameItem(${item.id})">⚙️</span>
+                    <span class="delete-item" onclick="deleteItem(${item.id})">✕</span>
+                </div>
             </div>
 
             <div class="counter">
@@ -553,6 +584,31 @@ function renameItem(id){
     save();
 }
 
+function createItem(){
+    const name = prompt("Nome do novo item:");
+    if(!name || !name.trim()) return;
+
+    const newId = items.length ? Math.max(...items.map(i => i.id)) + 1 : 1;
+
+    items.push({
+        id:newId,
+        name:name.trim(),
+        qty:0
+    });
+
+    save();
+}
+
+function deleteItem(id){
+    const item = find(id);
+
+    if(!confirm(`Excluir "${item.name}" ?`)) return;
+
+    items = items.filter(i => i.id !== id);
+
+    save();
+}
+
 /* EVENTS */
 document.getElementById("search").addEventListener("input",render);
 document.getElementById("sort").addEventListener("change",render);
@@ -562,6 +618,8 @@ window.changeQty = changeQty;
 window.addAmount = addAmount;
 window.removeAmount = removeAmount;
 window.renameItem = renameItem;
+window.createItem = createItem;
+window.deleteItem = deleteItem;
 
 </script>
 
