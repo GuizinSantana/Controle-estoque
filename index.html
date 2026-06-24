@@ -646,9 +646,9 @@ function deleteItem(id){
     save(); render();
 }
 
-/* ================= FUNÇÃO DE IMPORTAÇÃO PARSEADORA REAL DE TEXTO ================= */
+/* ================= FUNÇÃO DE IMPORTAÇÃO COM VERIFICAÇÃO INTELIGENTE DE COLUNAS E FILTRO A-B-C ================= */
 async function importarPlanilha() {
-    if(!confirm("Aviso: Esta função vai processar o seu arquivo original da planilha e preencher os campos estruturados de forma real. Deseja continuar?")) return;
+    if(!confirm("Deseja importar a planilha filtrando apenas locações de A, B e C e corrigindo os desvios de colunas?")) return;
 
     const inputElement = document.createElement("input");
     inputElement.type = "file";
@@ -669,15 +669,34 @@ async function importarPlanilha() {
             for (let line of lines) {
                 if (!line.trim()) continue;
                 
-                const colunas = line.split('\t');
+                const colunas = line.split('\t').map(c => c.trim());
                 
-                // Mapeia cada coluna para a sua respectiva caixinha no card
-                const locacao = colunas[0] ? colunas[0].trim() : "";
-                const descricao = colunas[2] ? colunas[2].trim() : "";
-                const fabricante = colunas[3] ? colunas[3].trim() : "";
-                const modelo = colunas[4] ? colunas[4].trim() : "";
+                // Pega a locação primária
+                let locacao = colunas[0] || "";
 
-                if (!descricao) continue;
+                // FILTRO PEDIDO: Aceita apenas se a locação começar com A, B ou C
+                const primeiraLetra = locacao.charAt(0).toUpperCase();
+                if (primeiraLetra !== 'A' && primeiraLetra !== 'B' && primeiraLetra !== 'C') {
+                    continue; // Ignora o item se não estiver na faixa pedida
+                }
+
+                // Dados originais brutos
+                let descricao = colunas[2] || "";
+                let fabricante = colunas[3] || "";
+                let modelo = colunas[4] || "";
+
+                // CORREÇÃO INTELIGENTE: Se a descrição veio vazia ou muito curta, mas a "marca" tem cara de nome de item grande, reajusta
+                if (!descricao && fabricante.length > 5) {
+                    descricao = fabricante;
+                    fabricante = "---";
+                } else if (descricao.length < 3 && fabricante.length > 8) {
+                    // Caso o nome legítimo tenha escorregado inteiro para a coluna da Marca
+                    descricao = fabricante;
+                    fabricante = "---";
+                }
+
+                // Se mesmo após a verificação o item não possuir nome válido, pula
+                if (!descricao || descricao === "Descrição" || descricao.startsWith("---")) continue;
 
                 novosItens.push({
                     id: idCounter++,
@@ -686,9 +705,9 @@ async function importarPlanilha() {
                     model: modelo,
                     supplier: "",
                     contact: "",
-                    location: locacao,
+                    location: locacao, // Inserido no lugar exato
                     qty: 0,
-                    minQty: 2 // Define estoque mínimo padrão em 2 para verificação de testes no carrinho
+                    minQty: 2
                 });
             }
 
@@ -696,9 +715,9 @@ async function importarPlanilha() {
                 items = novosItens;
                 save(); 
                 render(); 
-                alert(`Sucesso absoluto! ${items.length} itens estruturados foram importados localmente para o seu navegador.`);
+                alert(`Sucesso! ${items.length} itens das locações A, B e C foram importados com os nomes devidamente corrigidos.`);
             } else {
-                alert("Nenhum dado válido encontrado no arquivo .txt.");
+                alert("Nenhum dado válido na faixa de locações A-B-C foi encontrado no arquivo.");
             }
         };
         reader.readAsText(file, "UTF-8");
