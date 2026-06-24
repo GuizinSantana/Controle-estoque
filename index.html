@@ -1,7 +1,30 @@
-<!DOCTYPE html><html lang="pt-BR">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Controle de Estoque Avançado - Bimbo</title>
-<style>
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle de Estoque Avançado - Bimbo</title>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+        import { getDatabase, ref, onValue, set, update, remove } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDTiGHVdsmXwoEFIhOxxSVle1Mz4LAFsTE",
+            authDomain: "controle-de-estoque-avan-fc46a.firebaseapp.com",
+            databaseURL: "https://controle-de-estoque-avan-fc46a-default-rtdb.firebaseio.com",
+            projectId: "controle-de-estoque-avan-fc46a",
+            storageBucket: "controle-de-estoque-avan-fc46a.firebasestorage.app",
+            messagingSenderId: "773817161524",
+            appId: "1:773817161524:web:d7ac6bceeda7daea54f761"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        window.fb = { db, ref, set, update, remove, onValue };
+    </script>
+
+    <style>
 *{    box-sizing:border-box;    margin:0;    padding:0;    font-family:Arial,sans-serif;}
 body{    background:#e9eef7;    display:flex; min-height:100vh; overflow-x: hidden;}
 
@@ -382,40 +405,32 @@ function updateData(newItemsArray) {
     applyFilterAndSort();
 }
 
-function init(){
-    const localData = localStorage.getItem(DB_LOCAL_KEY);
-    let initialItems = [];
-    if(localData){            
-        initialItems = JSON.parse(localData);        
-    } else {            
-        for(let i=1; i<=2500; i++){                
-            initialItems.push({ 
-                id: i, name: `Item ${i}`, brand: 'Bimbo Brand', model: `Mod-${1000 + i}`,
-                supplier: 'Fornecedor Exemplo', contact: 'comercial@fornecedor.com',
-                location: `Corredor ${Math.ceil(i/100)}`, qty: Math.floor(Math.random() * 15), minQty: 5
-            });            
-        }
-        localStorage.setItem(DB_LOCAL_KEY, JSON.stringify(initialItems));      
-    }
-    
-    const localConfig = localStorage.getItem(DB_CONFIG_KEY);
-    if(localConfig){
-        configs = JSON.parse(localConfig);
-    } else {
-        configs = {
+function init() {
+    // Escuta o estoque em tempo real no Firebase
+    window.fb.onValue(window.fb.ref(window.fb.db, 'estoque/'), (snapshot) => {
+        const data = snapshot.val();
+        items = data ? Object.values(data) : [];
+        updateData(items);
+    });
+
+    // Escuta as configurações no Firebase
+    window.fb.onValue(window.fb.ref(window.fb.db, 'config/'), (snapshot) => {
+        configs = snapshot.val() || {
             buyerEmail: "almoxarifado.bimbo@gmail.com",
             template: "Prezado {fornecedor},\n\nIdentificamos que o item [{item} - {modelo}] atingiu o nível crítico em nosso estoque.\nSolicitamos o fornecimento de cotação/envio para reposição urgente.\n\nAtenciosamente,\nAlmoxarifado Bimbo."
         };
-        localStorage.setItem(DB_CONFIG_KEY, JSON.stringify(configs));
-    }
-    
-    document.getElementById("cfgBuyerEmail").value = configs.buyerEmail;
-    document.getElementById("cfgEmailTemplate").value = configs.template;
-
-    updateData(initialItems);
+        document.getElementById("cfgBuyerEmail").value = configs.buyerEmail;
+        document.getElementById("cfgEmailTemplate").value = configs.template;
+    });
 }
-
-function save(){ localStorage.setItem(DB_LOCAL_KEY, JSON.stringify(items)); }
+function save() {
+    // Transforma o array 'items' num objeto para o Firebase entender
+    const dataToSave = {};
+    items.forEach(i => dataToSave[i.id] = i);
+    
+    // Envia para o Firebase
+    window.fb.set(window.fb.ref(window.fb.db, 'estoque/'), dataToSave);
+}
 function find(id){ return items.find(i=>i.id===id); }
 
 function switchTab(tabId, btn) {
@@ -634,34 +649,39 @@ function saveModalItem() {
     
     if(!name) { alert("O nome do item é obrigatório!"); return; }
 
-    if(id) {
-        const item = find(parseInt(id));
-        if(item) {
-            item.name = name;
-            item.brand = document.getElementById("modalBrand").value.trim();
-            item.model = document.getElementById("modalModel").value.trim();
-            item.supplier = document.getElementById("modalSupplier").value.trim();
-            item.contact = document.getElementById("modalContact").value.trim();
-            item.location = document.getElementById("modalLocation").value.trim();
-            item.minQty = minQty;
-        }
-    } else {
-        const newId = items.length ? Math.max(...items.map(i => i ? i.id : 0)) + 1 : 1;
-        items.push({
-            id: newId, name: name, brand: document.getElementById("modalBrand").value.trim(),
-            model: document.getElementById("modalModel").value.trim(), supplier: document.getElementById("modalSupplier").value.trim(),
-            contact: document.getElementById("modalContact").value.trim(), location: document.getElementById("modalLocation").value.trim(),
-            qty: 0, minQty: minQty
-        });
-    }
-    save(); closeItemModal(); updateData(items);
-}
+    // Define o ID: se for edição usa o existente, se for novo gera um timestamp
+    const itemId = id ? parseInt(id) : Date.now();
 
+    // Cria o objeto com os dados do formulário
+    const itemData = {
+        id: itemId,
+        name: name,
+        brand: document.getElementById("modalBrand").value.trim(),
+        model: document.getElementById("modalModel").value.trim(),
+        supplier: document.getElementById("modalSupplier").value.trim(),
+        contact: document.getElementById("modalContact").value.trim(),
+        location: document.getElementById("modalLocation").value.trim(),
+        minQty: minQty,
+        // Se for novo, inicia com qty 0; se for edição, mantém o que já tinha
+        qty: id ? find(parseInt(id)).qty : 0 
+    };
+
+    // ENVIA PARA O FIREBASE
+    // O update vai criar o item se não existir, ou atualizar se já existir
+    window.fb.update(window.fb.ref(window.fb.db, 'estoque/' + itemId), itemData);
+
+    closeItemModal();
+    // NÃO precisa de save() nem updateData() aqui!
+    // O Firebase avisará o 'init()' automaticamente que algo mudou.
+}
 function deleteItem(id){    
-    const item = find(id); if(!item) return;
+    const item = find(id); 
+    if(!item) return;
+    
     if(!confirm(`Excluir "${item.name}" ?`)) return;    
-    items = items.filter(i => i.id !== id);    
-    save(); updateData(items);
+    
+    // Remove do Firebase (o init() vai atualizar a tela sozinho)
+    window.fb.remove(window.fb.ref(window.fb.db, 'estoque/' + id));
 }
 
 document.getElementById("search").addEventListener("input", applyFilterAndSort);
