@@ -115,7 +115,7 @@ body{    background:#e9eef7;    display:flex; min-height:100vh; overflow:hidden;
 .btn-save{ background:#00b140; }
 .btn-cancel{ background:#d91c1c; }
 
-/* ================= ADAPTAÇÕES DISPOSITIVOS MÓVEIS ================= */
+/* ================= CORREÇÕES DE RESPONSIVIDADE TELEMÓVEL ================= */
 @media(max-width:768px){
     body { flex-direction: column-reverse; }
     .sidebar { width: 100%; height: 65px; position: relative; bottom: 0; left: 0; padding: 0; flex-direction: row; border-top: 2px solid #0f4fb8; }
@@ -176,7 +176,7 @@ body{    background:#e9eef7;    display:flex; min-height:100vh; overflow:hidden;
             </div>
         </div>
         
-        <div class="virtual-scroll-viewport" id="viewport">
+        <div class="virtual-scroll-viewport" id="viewport" onscroll="onViewportScroll()">
             <div class="virtual-scroll-content" id="scrollContent"></div>
         </div>
     </div>
@@ -217,7 +217,6 @@ body{    background:#e9eef7;    display:flex; min-height:100vh; overflow:hidden;
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
 import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
 
-// CREDENCIAIS INTEGRADAS DO SEU PROJETO FIREBASE
 const firebaseConfig = {
     apiKey: "AIzaSyCrSgho0Y05w8JBZze612-nt5DjMOfBUrs",
     authDomain: "controle-estoque-c3001.firebaseapp.com",
@@ -256,17 +255,16 @@ window.checkPassword = checkPassword;
 function init(){
     const dbRef = ref(db, DB_PATH);
 
-    // Escuta em tempo real as atualizações vindo do Firebase
+    // Escuta em tempo real as atualizações vindas do Firebase
     onValue(dbRef, (snapshot) => {
         if(snapshot.exists()){
             items = snapshot.val();
-            // Tratamento caso venha objeto associativo em vez de array puro
             if(!Array.isArray(items)) {
                 items = Object.values(items);
             }
         } else {
+            // Se o Firebase estiver limpo, popula com os 2500 itens padrão automaticamente
             items = [];
-            // Popula o banco com os 2500 itens padrão caso esteja zerado pela primeira vez
             for(let i = 1; i <= 2500; i++){                
                 items.push({ 
                     id: i, name: `Item ${i}`, brand: 'Bimbo Reforçado', model: `MOD-${1000+i}`,
@@ -307,8 +305,8 @@ window.switchTab = switchTab;
 
 function updateColumnsCount() {
     const w = window.innerWidth;
-    if (w < 768) {
-        columnsCount = 1; // Ajustado especificamente para mobile puro
+    if (w <= 768) {
+        columnsCount = 1; // 1 Coluna perfeita no telemóvel
     } else {
         const availableWidth = w - 70;
         if (availableWidth < 660) columnsCount = 1;
@@ -452,6 +450,9 @@ function puleRender() {
     }
 }
 
+function onViewportScroll() { window.requestAnimationFrame(puleRender); }
+window.onViewportScroll = onViewportScroll;
+
 function changeQty(id,v){    
     const item = find(id); if(!item) return;
     item.qty = Math.max(0, (item.qty || 0) + v); save();
@@ -554,7 +555,6 @@ document.getElementById("search").addEventListener("input", () => {
 });
 document.getElementById("sort").addEventListener("change", applyFiltersAndSort);
 document.getElementById("filter").addEventListener("change", applyFiltersAndSort);
-document.getElementById("viewport").addEventListener("scroll", () => { window.requestAnimationFrame(puleRender); });
 window.addEventListener('resize', () => { updateColumnsCount(); puleRender(); });
 
 if(sessionStorage.getItem("bimboLogged")){
