@@ -115,7 +115,7 @@ body{    background:#e9eef7;    display:flex; min-height:100vh; overflow:hidden;
 .btn-save{ background:#00b140; }
 .btn-cancel{ background:#d91c1c; }
 
-/* ================= CORREÇÕES DE RESPONSIVIDADE TELEMÓVEL ================= */
+/* RESPONSIVIDADE TELEMÓVEL */
 @media(max-width:768px){
     body { flex-direction: column-reverse; }
     .sidebar { width: 100%; height: 65px; position: relative; bottom: 0; left: 0; padding: 0; flex-direction: row; border-top: 2px solid #0f4fb8; }
@@ -255,7 +255,7 @@ window.checkPassword = checkPassword;
 function init(){
     const dbRef = ref(db, DB_PATH);
 
-    // Escuta em tempo real as atualizações vindas do Firebase
+    // Escuta alterações na nuvem em tempo real
     onValue(dbRef, (snapshot) => {
         if(snapshot.exists()){
             items = snapshot.val();
@@ -263,7 +263,7 @@ function init(){
                 items = Object.values(items);
             }
         } else {
-            // Se o Firebase estiver limpo, popula com os 2500 itens padrão automaticamente
+            // Se o Firebase estiver completamente vazio, gera os 2500 itens iniciais na nuvem
             items = [];
             for(let i = 1; i <= 2500; i++){                
                 items.push({ 
@@ -284,6 +284,8 @@ function init(){
         updateColumnsCount();
         applyFiltersAndSort();
     });
+
+    window.addEventListener('resize', () => { updateColumnsCount(); puleRender(); });
 }
 
 function setDefaultConfigs() {
@@ -291,7 +293,10 @@ function setDefaultConfigs() {
     localStorage.setItem(DB_CONFIG_KEY, JSON.stringify(configs));
 }
 
+// Salva e atualiza diretamente no nó do Firebase
 function save(){ set(ref(db, DB_PATH), items); }
+window.save = save;
+
 function find(id){ return items.find(i=>i && i.id===id); }
 
 function switchTab(tabId, btn) {
@@ -304,16 +309,11 @@ function switchTab(tabId, btn) {
 window.switchTab = switchTab;
 
 function updateColumnsCount() {
-    const w = window.innerWidth;
-    if (w <= 768) {
-        columnsCount = 1; // 1 Coluna perfeita no telemóvel
-    } else {
-        const availableWidth = w - 70;
-        if (availableWidth < 660) columnsCount = 1;
-        else if (availableWidth < 1000) columnsCount = 2;
-        else if (availableWidth < 1350) columnsCount = 3;
-        else columnsCount = 4;
-    }
+    const w = window.innerWidth - (window.innerWidth > 768 ? 260 : 70);
+    if (w < 660) columnsCount = 1;
+    else if (w < 1000) columnsCount = 2;
+    else if (w < 1350) columnsCount = 3;
+    else columnsCount = 4;
 }
 
 function applyFiltersAndSort() {
@@ -367,7 +367,7 @@ function updateSummaryData() {
             div.innerHTML = `
                 <div class="cart-info">
                     <h4>${item.name}</h4>
-                    <p><b>Modelo:</b> ${item.model||'---'} | <b>Locação:</b> ${item.location||'---'}</p>
+                    <p><b>Modelo:</b> ${item.model} | <b>Locação:</b> ${item.location}</p>
                     <p>Qtd: <span style="color:#e4001b; font-weight:bold">${qty}</span> de ${min}</p>
                 </div>
                 <button class="btn-order" onclick="triggerSemiAutoPurchase(${item.id})">✉️ Comprar</button>
@@ -409,7 +409,7 @@ function puleRender() {
 
         const col = i % columnsCount;
         const row = Math.floor(i / columnsCount);
-        const posX = columnsCount === 1 ? '0px' : `calc(${col} * (100% / ${columnsCount}))`;
+        const posX = `calc(${col} * (100% / ${columnsCount}))`;
         const posY = row * (CARD_HEIGHT + GAP);
 
         const card = document.createElement("div");
@@ -417,8 +417,8 @@ function puleRender() {
         card.style.position = "absolute";
         card.style.top = `${posY}px`;
         card.style.left = posX;
-        card.style.width = columnsCount === 1 ? '100%' : `calc((100% / ${columnsCount}) - ${(columnsCount - 1) * GAP / columnsCount}px)`;
-        if(columnsCount > 1 && col > 0) card.style.marginLeft = `${(col * GAP) / columnsCount}px`;
+        card.style.width = `calc((100% / ${columnsCount}) - ${(columnsCount - 1) * GAP / columnsCount}px)`;
+        if(col > 0) card.style.marginLeft = `${(col * GAP) / columnsCount}px`;
 
         let statusHTML = item.qty === 0 ? `<div class="status-warning" style="color:#ff4d4d;">❌ Zerado</div>` :
                          item.qty < item.minQty ? `<div class="status-warning" style="color:#ffcc00;">⚠️ Baixo</div>` :
@@ -433,11 +433,11 @@ function puleRender() {
                 <p><span>Fornecedor:</span><span class="card-text-value">${item.supplier||'---'}</span></p>
                 <p><span>Contato:</span><span class="card-text-value">${item.contact||'---'}</span></p>
                 <p><span>Locação:</span><span class="card-text-value">${item.location||'---'}</span></p>
-                <p><span>Mínimo:</span><span class="card-text-value">${item.minQty || 0}</span></p>
+                <p><span>Mínimo:</span><span class="card-text-value">${item.minQty}</span></p>
             </div>
             <div class="counter">
                 <button onclick="changeQty(${item.id},-1)">−</button>
-                <div class="value">${item.qty || 0}</div>
+                <div class="value">${item.qty}</div>
                 <button onclick="changeQty(${item.id},1)">+</button>
             </div>
             ${statusHTML}
@@ -461,13 +461,13 @@ window.changeQty = changeQty;
 
 function addAmount(id){    
     const amount = parseInt(prompt("Adicionar quantidade:")); if(isNaN(amount)||amount<=0) return;    
-    const item = find(id); if(item) { item.qty = (item.qty || 0) + amount; save(); }
+    const item = find(id); if(item) { item.qty += amount; save(); }
 }
 window.addAmount = addAmount;
 
 function removeAmount(id){    
     const amount = parseInt(prompt("Retirar quantidade:")); if(isNaN(amount)||amount<=0) return;    
-    const item = find(id); if(item) { item.qty = Math.max(0, (item.qty || 0) - amount); save(); }
+    const item = find(id); if(item) { item.qty = Math.max(0, item.qty - amount); save(); }
 }
 window.removeAmount = removeAmount;
 
@@ -489,13 +489,13 @@ function openRenameModal(id) {
     const item = find(id); if(!item) return;
     document.getElementById("modalTitle").innerText = "Editar Item";
     document.getElementById("modalItemId").value = id;
-    document.getElementById("modalName").value = item.name || "";
-    document.getElementById("modalBrand").value = item.brand || "";
-    document.getElementById("modalModel").value = item.model || "";
-    document.getElementById("modalSupplier").value = item.supplier || "";
-    document.getElementById("modalContact").value = item.contact || "";
-    document.getElementById("modalLocation").value = item.location || "";
-    document.getElementById("modalMinQty").value = item.minQty || 0;
+    document.getElementById("modalName").value = item.name;
+    document.getElementById("modalBrand").value = item.brand;
+    document.getElementById("modalModel").value = item.model;
+    document.getElementById("modalSupplier").value = item.supplier;
+    document.getElementById("modalContact").value = item.contact;
+    document.getElementById("modalLocation").value = item.location;
+    document.getElementById("modalMinQty").value = item.minQty;
     document.getElementById("itemModal").style.display = "flex";
 }
 window.openRenameModal = openRenameModal;
@@ -555,7 +555,6 @@ document.getElementById("search").addEventListener("input", () => {
 });
 document.getElementById("sort").addEventListener("change", applyFiltersAndSort);
 document.getElementById("filter").addEventListener("change", applyFiltersAndSort);
-window.addEventListener('resize', () => { updateColumnsCount(); puleRender(); });
 
 if(sessionStorage.getItem("bimboLogged")){
     document.getElementById("loginScreen").style.display = "none";
