@@ -1,4 +1,3 @@
-
 <!DOCTYPE html><html lang="pt-BR">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Controle de Estoque Avançado - Bimbo</title>
@@ -13,7 +12,7 @@ body{    background:#e9eef7;    display:flex; min-height:100vh; overflow-x: hidd
 #loginBtn{    width:100%;    height:90px;    margin-top:28px;    border:none;    border-radius:18px;    background:#e4001b;    color:white;    font-size:38px;    font-weight:bold;    cursor:pointer;}
 #errorMsg{    margin-top:18px;    text-align:center;    color:#ffd2d2;    font-size:22px;    font-weight:bold;}
 
-/* ================= BARRA LATERAL ULTRA OTIMIZADA ================= */
+/* ================= BARRA LATERAL IGUAL PC (OTIMIZADA) ================= */
 .sidebar{
     width: 70px;
     background: #001c4a;
@@ -24,46 +23,46 @@ body{    background:#e9eef7;    display:flex; min-height:100vh; overflow-x: hidd
     position: fixed;
     top: 0; bottom: 0; left: 0;
     z-index: 1000;
-    transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-    overflow: hidden;
+    transition: width 0.23s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow-x: hidden;
+    overflow-y: auto;
     white-space: nowrap;
-    box-shadow: 4px 0 10px rgba(0,0,0,0.15);
-    /* Força o navegador a isolar a barra do resto da página (Adeus lentidão) */
-    contain: strict; 
+    box-shadow: 4px 0 10px rgba(0,0,0,0.2);
+    contain: padding; 
     transform: translateZ(0); 
     will-change: width;
 }
-.sidebar:hover { width: 260px; }
+/* Efeito de expansão (Ativado por hover no PC ou pela classe .expanded no Mobile) */
+.sidebar:hover, .sidebar.expanded { width: 260px; }
 
 .sidebar-brand{
-    padding: 0 0 20px 0;
+    padding: 0 0 15px 0;
     border-bottom: 1px solid rgba(255,255,255,0.1);
     text-align: center;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    height: 120px; /* Aumentado para acomodar logo maior */
+    min-height: 110px;
 }
-/* Tamanho da Logo Aumentado conforme solicitado */
-.sidebar-brand img{ width: 55px; height: auto; transition: width 0.25s ease; }
-.sidebar:hover .sidebar-brand img { width: 85px; }
+.sidebar-brand img{ width: 45px; height: auto; transition: width 0.23s ease; display: block;}
+.sidebar:hover .sidebar-brand img, .sidebar.expanded .sidebar-brand img { width: 75px; }
 
 .sidebar-brand h3{ 
-    font-size: 16px; 
+    font-size: 15px; 
     color: #7fb2ff; 
     font-weight: normal; 
     margin-top: 8px;
     opacity: 0;
-    transition: opacity 0.2s;
+    transition: opacity 0.15s;
 }
-.sidebar:hover .sidebar-brand h3 { opacity: 1; }
+.sidebar:hover .sidebar-brand h3, .sidebar.expanded .sidebar-brand h3 { opacity: 1; }
 
-.sidebar-menu { display: flex; flex-direction: column; gap: 8px; margin-top: 20px; padding: 0 10px;}
+.sidebar-menu { display: flex; flex-direction: column; gap: 8px; margin-top: 15px; padding: 0 8px;}
 .menu-btn {
     display: flex;
     align-items: center;
-    padding: 14px 15px;
+    padding: 14px 12px;
     color: #a4c2f4;
     background: transparent;
     border: none;
@@ -76,10 +75,11 @@ body{    background:#e9eef7;    display:flex; min-height:100vh; overflow-x: hidd
     width: 100%;
     position: relative;
 }
-.menu-btn .icon { font-size: 20px; min-width: 30px; text-align: center; display: inline-block; }
-.menu-btn .btn-text { opacity: 0; transition: opacity 0.15s; margin-left: 5px; display: inline-block; }
-.sidebar:hover .menu-btn .btn-text { opacity: 1; }
+.menu-btn .icon { font-size: 20px; min-width: 32px; text-align: center; display: inline-block; }
+.menu-btn .btn-text { opacity: 0; transition: opacity 0.15s; margin-left: 5px; display: inline-block; pointer-events: none;}
+.sidebar:hover .menu-btn .btn-text, .sidebar.expanded .menu-btn .btn-text { opacity: 1; }
 .menu-btn:hover, .menu-btn.active { background: #0f4fb8; color: white; }
+
 .menu-btn span.badge {
     background: #e4001b;
     color: white;
@@ -91,9 +91,9 @@ body{    background:#e9eef7;    display:flex; min-height:100vh; overflow-x: hidd
     top: 50%;
     transform: translateY(-50%);
 }
-.sidebar:not(:hover) .menu-btn span.badge {
-    right: 8px;
-    top: 8px;
+.sidebar:not(:hover):not(.expanded) .menu-btn span.badge {
+    right: 6px;
+    top: 6px;
     transform: none;
     font-size: 9px;
     padding: 1px 4px;
@@ -105,17 +105,16 @@ body{    background:#e9eef7;    display:flex; min-height:100vh; overflow-x: hidd
     flex: 1;
     padding: 25px;
     max-width: calc(100% - 70px);
-    transition: margin-left 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: margin-left 0.23s cubic-bezier(0.4, 0, 0.2, 1);
 }
-/* Removido o seletor genérico do main-content no hover da sidebar para evitar repinturas pesadas na árvore do DOM */
-.sidebar:hover ~ .main-content {
+.sidebar:hover ~ .main-content, .sidebar.expanded ~ .main-content {
     margin-left: 260px;
     max-width: calc(100% - 260px);
 }
 .app-section { display: none; }
 .app-section.active { display: block; }
 
-/* ================= HEADER & GRIDS ================= */
+/* ================= GRIDS E COMPONENTES ================= */
 .header{ display:flex; align-items:center; justify-content:space-between; position:relative; margin-bottom:25px; border-bottom: 2px solid #002b73; padding-bottom: 15px;}
 .title-container h1{ color:#002b73; font-size:30px; margin:0;}
 .title-container h2{ font-size:14px; color:#3b5ea8; margin-top:4px; font-weight:normal;}
@@ -137,7 +136,7 @@ body{    background:#e9eef7;    display:flex; min-height:100vh; overflow-x: hidd
     padding:16px; 
     box-shadow:0 4px 12px rgba(0,0,0,.22);
     display:flex; flex-direction:column; justify-content:space-between;
-    contain: content; /* Isolamento total de renderização do card */
+    contain: content;
 }
 .card-header{ display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px; min-height:48px;}
 .item-name{ font-weight:bold; font-size:19px; color:white; line-height:1.2; padding-right:10px;}
@@ -148,7 +147,7 @@ body{    background:#e9eef7;    display:flex; min-height:100vh; overflow-x: hidd
 .item-details span{ font-weight:bold; color:#7fb2ff; min-width:85px; }
 .card-text-value{ color: white; font-size: 13px; text-align: right; word-break: break-all; padding-left: 10px;}
 .counter{ display:flex; justify-content:center; align-items:center; gap:15px; margin-bottom:10px;}
-.counter button{ width:44px; height:44px; font-size:22px; font-weight:bold; color:white; border:none; border-radius:12px; cursor:pointer;}
+.counter button{ width:46px; height:46px; font-size:24px; font-weight:bold; color:white; border:none; border-radius:12px; cursor:pointer;}
 .counter button:first-child{ background:#d91c1c;}
 .counter button:last-child{ background:#00b140;}
 .value{ font-size:28px; font-weight:bold; min-width:80px; text-align:center; background:#001c4a; color:white; padding:8px 12px; border-radius:12px; border:2px solid #2f7fff;}
@@ -158,7 +157,7 @@ body{    background:#e9eef7;    display:flex; min-height:100vh; overflow-x: hidd
 .actions button:first-child{ background:#12a150;}
 .actions button:last-child{ background:#d91c1c;}
 #addItemBtn{ background:#001c4a; color:white; border:none; border-radius:12px; padding:12px 20px; font-size:16px; font-weight:bold; cursor:pointer;}
-.delete-item{ position:absolute; top:4px; right:4px; width:16px; height:16px; border-radius:50%; border:1px solid #ff0000; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:9px; font-weight:bold; background:#ff0000; color:white; z-index:99; line-height:1;}
+.delete-item{ position:absolute; top:4px; right:4px; width:20px; height:20px; border-radius:50%; border:1px solid #ff0000; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:11px; font-weight:bold; background:#ff0000; color:white; z-index:99; line-height:1;}
 
 /* ================= PAINEL DO CARRINHO ================= */
 .cart-grid { display: flex; flex-direction: column; gap: 15px; margin-top: 15px;}
@@ -181,7 +180,6 @@ body{    background:#e9eef7;    display:flex; min-height:100vh; overflow-x: hidd
     border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 15px;
     display: flex; align-items: center; gap: 8px; transition: background 0.2s;
 }
-.btn-order:hover { background: #12a150; }
 
 /* ================= CONFIGURAÇÕES ================= */
 .config-box { background: white; padding: 25px; border-radius: 18px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); max-width: 650px;}
@@ -193,26 +191,32 @@ body{    background:#e9eef7;    display:flex; min-height:100vh; overflow-x: hidd
 
 /* ================= MODAL CUSTOMIZADO ================= */
 .modal-overlay{ position:fixed; inset:0; background:rgba(0,0,0,0.6); display:none; align-items:center; justify-content:center; z-index:10000;}
-.modal-box{ background:linear-gradient(180deg,#0f4fb8,#002b73); padding:25px; border-radius:18px; width:min(450px,90vw); box-shadow:0 10px 25px rgba(0,0,0,0.3); color:white; border:2px solid #2f7fff;}
+.modal-box{ background:linear-gradient(180deg,#0f4fb8,#002b73); padding:25px; border-radius:18px; width:min(450px,90vw); max-height: 85vh; overflow-y: auto; box-shadow:0 10px 25px rgba(0,0,0,0.3); color:white; border:2px solid #2f7fff;}
 .modal-box h3{ margin-bottom:15px; font-size:22px; color:#fff; border-bottom:2px solid #e4001b; padding-bottom:8px;}
 .modal-group{ display:flex; flex-direction:column; gap:5px; margin-bottom:12px; }
 .modal-group label{ font-size:14px; font-weight:bold; color:#7fb2ff; }
-.modal-group input{ padding:10px; border-radius:8px; border:2px solid #2f7fff; background:#001c4a; color:white; font-size:15px; outline:none;}
+.modal-group input{ padding:12px; border-radius:8px; border:2px solid #2f7fff; background:#001c4a; color:white; font-size:15px; outline:none;}
 .modal-buttons{ display:flex; gap:10px; margin-top:20px; }
-.modal-buttons button{ flex:1; padding:12px; border:none; border-radius:10px; font-size:15px; font-weight:bold; cursor:pointer; color:white; }
+.modal-buttons button{ flex:1; padding:14px; border:none; border-radius:10px; font-size:15px; font-weight:bold; cursor:pointer; color:white; }
 .btn-save{ background:#00b140; }
 .btn-cancel{ background:#d91c1c; }
 
+/* ================= ADAPTAÇÕES ESPECÍFICAS PARA CELULAR SEM QUEBRAR O LAYOUT DE PC ================= */
 @media(max-width:768px){
-    .sidebar:hover { width: 70px; }
-    .sidebar-brand h3, .menu-btn .btn-text { display: none !important; }
-    .main-content { margin-left: 70px; max-width: calc(100% - 70px); padding: 15px;}
-    .sidebar:hover ~ .main-content { margin-left: 70px; max-width: calc(100% - 70px); }
-    .top-bar { flex-direction: column; }
-    .summary-bar { flex-direction: column; align-items: flex-start; }
+    /* Mantém a estrutura lateral do PC, mas ajusta margens para telas menores */
+    .main-content { padding: 15px; }
+    .title-container h1 { font-size: 23px; }
+    
+    .top-bar { flex-direction: column; gap: 8px; }
+    .top-bar input, .top-bar select, #addItemBtn { width: 100%; padding: 14px; }
+    
+    .summary-bar { flex-direction: column; align-items: flex-start; gap: 10px; }
     .summary-status-container { margin-left: 0; width: 100%; justify-content: space-between; }
+    
+    /* Grid vira 1 coluna no celular para não espremer os cards */
     #container { grid-template-columns: 1fr; }
-    .cart-card { flex-direction: column; align-items: flex-start; gap: 12px; }
+    
+    .cart-card { flex-direction: column; align-items: flex-start; gap: 14px; }
     .btn-order { width: 100%; justify-content: center; }
 }
 </style></head>
@@ -226,7 +230,8 @@ body{    background:#e9eef7;    display:flex; min-height:100vh; overflow-x: hidd
     </div>
 </div>
 
-<div class="sidebar">
+<!-- Barra lateral reativa tanto para Desktop quanto para cliques no Mobile -->
+<div class="sidebar" id="appSidebar" onclick="toggleSidebarMobile(event)">
     <div class="sidebar-brand">
         <img src="bimbo-logo.png" alt="Bimbo">
         <h3>Almoxarifado</h3>
@@ -245,6 +250,7 @@ body{    background:#e9eef7;    display:flex; min-height:100vh; overflow-x: hidd
 </div>
 
 <div class="main-content">
+    <!-- DASHBOARD -->
     <div id="section-dashboard" class="app-section active">
         <div class="header">
             <div class="title-container">
@@ -281,6 +287,7 @@ body{    background:#e9eef7;    display:flex; min-height:100vh; overflow-x: hidd
         <div id="container"></div>
     </div>
 
+    <!-- CARRINHO -->
     <div id="section-cart" class="app-section">
         <div class="header">
             <div class="title-container">
@@ -291,6 +298,7 @@ body{    background:#e9eef7;    display:flex; min-height:100vh; overflow-x: hidd
         <div class="cart-grid" id="cartContainer"></div>
     </div>
 
+    <!-- CONFIGURAÇÕES -->
     <div id="section-settings" class="app-section">
         <div class="header">
             <div class="title-container">
@@ -315,6 +323,7 @@ body{    background:#e9eef7;    display:flex; min-height:100vh; overflow-x: hidd
     </div>
 </div>
 
+<!-- MODAL CADASTRAR/EDITAR -->
 <div id="itemModal" class="modal-overlay">
     <div class="modal-box">
         <h3 id="modalTitle">Novo Item</h3>
@@ -344,10 +353,9 @@ let items = [];
 let configs = {};
 let initialized = false;
 
-// Configurações de Renderização sob Demanda (Scroll Infinito)
 let filteredList = [];
 let itemsDisplayedCount = 0;
-const ITEMS_PER_PAGE = 30; // Exibe apenas 30 itens por vez inicialmente
+const ITEMS_PER_PAGE = 30; 
 
 function checkPassword(){
     const input = document.getElementById("passwordInput").value;
@@ -358,11 +366,16 @@ function checkPassword(){
     } else { document.getElementById("errorMsg").innerText = "Senha incorreta"; }
 }
 
-/* ====================================================================
-   PONTO DE ENTRADA PARA O SEU FUTURO FIREBASE:
-   Quando conectar ao Firestore, você só precisará chamar a função abaixo 
-   passando os dados atualizados do banco!
-   ==================================================================== */
+/* Gerenciador touch para expandir/recuar a barra lateral no celular ao clicar nela */
+function toggleSidebarMobile(e) {
+    if(window.innerWidth <= 768) {
+        const sidebar = document.getElementById("appSidebar");
+        if(e.target.classList.contains("sidebar") || e.target.closest(".sidebar-brand")) {
+            sidebar.classList.toggle("expanded");
+        }
+    }
+}
+
 function updateData(newItemsArray) {
     items = newItemsArray;
     preCalculatedTotalsAndCart();
@@ -399,7 +412,6 @@ function init(){
     document.getElementById("cfgBuyerEmail").value = configs.buyerEmail;
     document.getElementById("cfgEmailTemplate").value = configs.template;
 
-    // Inicializa o fluxo de dados unificado
     updateData(initialItems);
 }
 
@@ -411,6 +423,10 @@ function switchTab(tabId, btn) {
     document.querySelectorAll('.menu-btn').forEach(b => b.classList.remove('active'));
     document.getElementById(`section-${tabId}`).classList.add('active');
     btn.classList.add('active');
+    
+    // Fecha a barra lateral automaticamente no celular após escolher uma aba
+    document.getElementById("appSidebar").classList.remove("expanded");
+    window.scrollTo({top: 0});
 }
 
 function saveSettings() {
@@ -490,13 +506,11 @@ function applyFilterAndSort() {
 
     document.getElementById("totalItems").innerText = filteredList.length;
     
-    // Reseta visualizador para a primeira página
     document.getElementById("container").innerHTML = "";
     itemsDisplayedCount = 0;
     loadMoreItems();
 }
 
-// Renderiza fatias sob demanda evitando gargalo de processamento DOM
 function loadMoreItems() {
     if (itemsDisplayedCount >= filteredList.length) return;
 
@@ -546,7 +560,6 @@ function loadMoreItems() {
     itemsDisplayedCount = nextBatchLimit;
 }
 
-// Ouvinte de rolagem infinita (Debounced para poupar energia de processamento)
 window.addEventListener("scroll", () => {
     if ((window.innerHeight + window.scrollY) >= document.documentElement.scrollHeight - 150) {
         loadMoreItems();
@@ -651,13 +664,19 @@ function deleteItem(id){
     save(); updateData(items);
 }
 
-// Otimização de Escuta Ativa
 document.getElementById("search").addEventListener("input", applyFilterAndSort);
 document.getElementById("sort").addEventListener("change", applyFilterAndSort);
 document.getElementById("filter").addEventListener("change", applyFilterAndSort);
 
 document.addEventListener("keydown",(e)=>{    
     if(e.key === "Enter" && document.getElementById("loginScreen").style.display !== "none") checkPassword();
+});
+
+// Fecha a sidebar se o usuário clicar no conteúdo principal (Mobile UX)
+document.querySelector(".main-content").addEventListener("click", () => {
+    if(window.innerWidth <= 768) {
+        document.getElementById("appSidebar").classList.remove("expanded");
+    }
 });
 
 if(sessionStorage.getItem("bimboLogged")){    
