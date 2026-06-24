@@ -25,224 +25,118 @@
     </script>
 
     <style>
-*{    box-sizing:border-box;    margin:0;    padding:0;    font-family:Arial,sans-serif;}
-body{    background:#e9eef7;    display:flex; min-height:100vh; overflow-x: hidden;}
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
+        body { background: #e9eef7; display: flex; min-height: 100vh; overflow-x: hidden; }
 
-/* ================= LOGIN ================= */
-#loginScreen{    position:fixed;    inset:0;    background:#0037b3;    background-image:url("login-bimbo.png");    background-size:cover;    background-position:center;    background-repeat:no-repeat;    z-index:99999;}
-#passwordArea{    position:absolute;    left:50%;    top:50%;    transform:translate(-50%,80px);    width:min(820px,85vw);}
-#passwordInput{    width:100%;    height:92px;    background:rgba(0,0,0,.12);    border:2px solid rgba(255,255,255,.45);    border-radius:18px;    outline:none;    color:white;    font-size:34px;    padding-left:35px;}
-#loginBtn{    width:100%;    height:90px;    margin-top:28px;    border:none;    border-radius:18px;    background:#e4001b;    color:white;    font-size:38px;    font-weight:bold;    cursor:pointer;}
-#errorMsg{    margin-top:18px;    text-align:center;    color:#ffd2d2;    font-size:22px;    font-weight:bold;}
+        /* ================= LOGIN ================= */
+        #loginScreen { position: fixed; inset: 0; background: #0037b3; background-image: url("login-bimbo.png"); background-size: cover; background-position: center; background-repeat: no-repeat; z-index: 99999; }
+        #passwordArea { position: absolute; left: 50%; top: 50%; transform: translate(-50%, 80px); width: min(820px, 85vw); }
+        #passwordInput { width: 100%; height: 92px; background: rgba(0,0,0,.12); border: 2px solid rgba(255,255,255,.45); border-radius: 18px; outline: none; color: white; font-size: 34px; padding-left: 35px; }
+        #loginBtn { width: 100%; height: 90px; margin-top: 28px; border: none; border-radius: 18px; background: #e4001b; color: white; font-size: 38px; font-weight: bold; cursor: pointer; }
+        #errorMsg { margin-top: 18px; text-align: center; color: #ffd2d2; font-size: 22px; font-weight: bold; }
 
-/* ================= BARRA LATERAL IGUAL PC (OTIMIZADA) ================= */
-.sidebar{
-    width: 70px;
-    background: #001c4a;
-    color: white;
-    display: flex;
-    flex-direction: column;
-    padding: 20px 0;
-    position: fixed;
-    top: 0; bottom: 0; left: 0;
-    z-index: 1000;
-    transition: width 0.23s cubic-bezier(0.4, 0, 0.2, 1);
-    overflow-x: hidden;
-    overflow-y: auto;
-    white-space: nowrap;
-    box-shadow: 4px 0 10px rgba(0,0,0,0.2);
-    contain: padding; 
-    transform: translateZ(0); 
-    will-change: width;
-}
-/* Efeito de expansão (Ativado por hover no PC ou pela classe .expanded no Mobile) */
-.sidebar:hover, .sidebar.expanded { width: 260px; }
+        /* ================= BARRA LATERAL ================= */
+        .sidebar { width: 70px; background: #001c4a; color: white; display: flex; flex-direction: column; padding: 20px 0; position: fixed; top: 0; bottom: 0; left: 0; z-index: 1000; transition: width 0.23s cubic-bezier(0.4, 0, 0.2, 1); overflow-x: hidden; overflow-y: auto; white-space: nowrap; box-shadow: 4px 0 10px rgba(0,0,0,0.2); contain: padding; transform: translateZ(0); will-change: width; }
+        .sidebar:hover, .sidebar.expanded { width: 260px; }
+        .sidebar-brand { padding: 0 0 15px 0; border-bottom: 1px solid rgba(255,255,255,0.1); text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 110px; }
+        .sidebar-brand img { width: 45px; height: auto; transition: width 0.23s ease; display: block; }
+        .sidebar:hover .sidebar-brand img, .sidebar.expanded .sidebar-brand img { width: 75px; }
+        .sidebar-brand h3 { font-size: 15px; color: #7fb2ff; font-weight: normal; margin-top: 8px; opacity: 0; transition: opacity 0.15s; }
+        .sidebar:hover .sidebar-brand h3, .sidebar.expanded .sidebar-brand h3 { opacity: 1; }
+        .sidebar-menu { display: flex; flex-direction: column; gap: 8px; margin-top: 15px; padding: 0 8px; }
+        .menu-btn { display: flex; align-items: center; padding: 14px 12px; color: #a4c2f4; background: transparent; border: none; border-radius: 10px; cursor: pointer; font-size: 16px; font-weight: bold; text-align: left; transition: background 0.2s, color 0.2s; width: 100%; position: relative; }
+        .menu-btn .icon { font-size: 20px; min-width: 32px; text-align: center; display: inline-block; }
+        .menu-btn .btn-text { opacity: 0; transition: opacity 0.15s; margin-left: 5px; display: inline-block; pointer-events: none; }
+        .sidebar:hover .menu-btn .btn-text, .sidebar.expanded .menu-btn .btn-text { opacity: 1; }
+        .menu-btn:hover, .menu-btn.active { background: #0f4fb8; color: white; }
+        .menu-btn span.badge { background: #e4001b; color: white; font-size: 11px; padding: 2px 6px; border-radius: 10px; position: absolute; right: 12px; top: 50%; transform: translateY(-50%); }
+        .sidebar:not(:hover):not(.expanded) .menu-btn span.badge { right: 6px; top: 6px; transform: none; font-size: 9px; padding: 1px 4px; }
 
-.sidebar-brand{
-    padding: 0 0 15px 0;
-    border-bottom: 1px solid rgba(255,255,255,0.1);
-    text-align: center;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-height: 110px;
-}
-.sidebar-brand img{ width: 45px; height: auto; transition: width 0.23s ease; display: block;}
-.sidebar:hover .sidebar-brand img, .sidebar.expanded .sidebar-brand img { width: 75px; }
+        /* ================= CONTEÚDO PRINCIPAL ================= */
+        .main-content { margin-left: 70px; flex: 1; padding: 25px; max-width: calc(100% - 70px); transition: margin-left 0.23s cubic-bezier(0.4, 0, 0.2, 1); }
+        .sidebar:hover ~ .main-content, .sidebar.expanded ~ .main-content { margin-left: 260px; max-width: calc(100% - 260px); }
+        .app-section { display: none; }
+        .app-section.active { display: block; }
 
-.sidebar-brand h3{ 
-    font-size: 15px; 
-    color: #7fb2ff; 
-    font-weight: normal; 
-    margin-top: 8px;
-    opacity: 0;
-    transition: opacity 0.15s;
-}
-.sidebar:hover .sidebar-brand h3, .sidebar.expanded .sidebar-brand h3 { opacity: 1; }
+        /* ================= GRIDS E COMPONENTES ================= */
+        .header { display: flex; align-items: center; justify-content: space-between; position: relative; margin-bottom: 25px; border-bottom: 2px solid #002b73; padding-bottom: 15px; }
+        .title-container h1 { color: #002b73; font-size: 30px; margin: 0; }
+        .title-container h2 { font-size: 14px; color: #3b5ea8; margin-top: 4px; font-weight: normal; }
+        .top-bar { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; }
+        .top-bar input, .top-bar select { padding: 12px; border: 2px solid #0f4fb8; border-radius: 12px; font-size: 16px; background: white; color: #001c4a; font-weight: bold; }
+        .top-bar input { flex: 1; }
+        .summary-bar { display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 20px; background: #002b73; padding: 12px 20px; border-radius: 12px; color: white; font-weight: bold; font-size: 16px; box-shadow: 0 2px 8px rgba(0,0,0,.15); align-items: center; }
+        .summary-item { display: flex; align-items: center; gap: 8px; }
+        .summary-value { background: #e4001b; padding: 4px 10px; border-radius: 8px; font-size: 15px; }
+        .summary-status-container { display: flex; gap: 12px; margin-left: auto; background: rgba(0,0,0,0.2); padding: 4px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); }
+        .status-badge { font-size: 14px; display: flex; align-items: center; gap: 4px; }
 
-.sidebar-menu { display: flex; flex-direction: column; gap: 8px; margin-top: 15px; padding: 0 8px;}
-.menu-btn {
-    display: flex;
-    align-items: center;
-    padding: 14px 12px;
-    color: #a4c2f4;
-    background: transparent;
-    border: none;
-    border-radius: 10px;
-    cursor: pointer;
-    font-size: 16px;
-    font-weight: bold;
-    text-align: left;
-    transition: background 0.2s, color 0.2s;
-    width: 100%;
-    position: relative;
-}
-.menu-btn .icon { font-size: 20px; min-width: 32px; text-align: center; display: inline-block; }
-.menu-btn .btn-text { opacity: 0; transition: opacity 0.15s; margin-left: 5px; display: inline-block; pointer-events: none;}
-.sidebar:hover .menu-btn .btn-text, .sidebar.expanded .menu-btn .btn-text { opacity: 1; }
-.menu-btn:hover, .menu-btn.active { background: #0f4fb8; color: white; }
+        #container { display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 16px; }
+        .card { position: relative; background: linear-gradient(180deg,#0f4fb8,#002b73); border-radius: 18px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,.22); display: flex; flex-direction: column; justify-content: space-between; contain: content; }
+        .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; min-height: 48px; }
+        .item-name { font-weight: bold; font-size: 19px; color: white; line-height: 1.2; padding-right: 10px; }
+        .gear { cursor: pointer; font-size: 22px; color: white; line-height: 1; }
+        .item-details { background: rgba(0, 28, 74, 0.6); border-radius: 10px; padding: 10px; margin-bottom: 14px; font-size: 13px; display: flex; flex-direction: column; gap: 6px; }
+        .item-details p { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 4px; }
+        .item-details p:last-child { border: none; padding: 0; }
+        .item-details span { font-weight: bold; color: #7fb2ff; min-width: 85px; }
+        .card-text-value { color: white; font-size: 13px; text-align: right; word-break: break-all; padding-left: 10px; }
+        .counter { display: flex; justify-content: center; align-items: center; gap: 15px; margin-bottom: 10px; }
+        .counter button { width: 46px; height: 46px; font-size: 24px; font-weight: bold; color: white; border: none; border-radius: 12px; cursor: pointer; }
+        .counter button:first-child { background: #d91c1c; }
+        .counter button:last-child { background: #00b140; }
+        .value { font-size: 28px; font-weight: bold; min-width: 80px; text-align: center; background: #001c4a; color: white; padding: 8px 12px; border-radius: 12px; border: 2px solid #2f7fff; }
+        .status-warning { text-align: center; font-weight: bold; font-size: 14px; margin-bottom: 14px; padding: 6px; border-radius: 8px; background: rgba(0, 0, 0, 0.2); }
+        .actions { display: flex; gap: 10px; }
+        .actions button { flex: 1; padding: 12px; border: none; border-radius: 12px; font-size: 14px; font-weight: bold; color: white; cursor: pointer; }
+        .actions button:first-child { background: #12a150; }
+        .actions button:last-child { background: #d91c1c; }
+        #addItemBtn { background: #001c4a; color: white; border: none; border-radius: 12px; padding: 12px 20px; font-size: 16px; font-weight: bold; cursor: pointer; }
+        .delete-item { position: absolute; top: 4px; right: 4px; width: 20px; height: 20px; border-radius: 50%; border: 1px solid #ff0000; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 11px; font-weight: bold; background: #ff0000; color: white; z-index: 99; line-height: 1; }
 
-.menu-btn span.badge {
-    background: #e4001b;
-    color: white;
-    font-size: 11px;
-    padding: 2px 6px;
-    border-radius: 10px;
-    position: absolute;
-    right: 12px;
-    top: 50%;
-    transform: translateY(-50%);
-}
-.sidebar:not(:hover):not(.expanded) .menu-btn span.badge {
-    right: 6px;
-    top: 6px;
-    transform: none;
-    font-size: 9px;
-    padding: 1px 4px;
-}
+        /* ================= PAINEL DO CARRINHO ================= */
+        .cart-grid { display: flex; flex-direction: column; gap: 15px; margin-top: 15px; }
+        .cart-card { background: white; border-radius: 14px; padding: 20px; border-left: 6px solid #e4001b; box-shadow: 0 4px 8px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }
+        .cart-card.low-stock { border-left-color: #ffcc00; }
+        .cart-info h4 { font-size: 18px; color: #002b73; margin-bottom: 5px; }
+        .cart-info p { font-size: 14px; color: #555; }
+        .cart-info span.reason { font-weight: bold; padding: 2px 6px; border-radius: 4px; font-size: 12px; }
+        .btn-order { background: #00b140; color: white; border: none; padding: 12px 24px; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 15px; display: flex; align-items: center; gap: 8px; transition: background 0.2s; }
 
-/* ================= CONTEÚDO PRINCIPAL ================= */
-.main-content {
-    margin-left: 70px;
-    flex: 1;
-    padding: 25px;
-    max-width: calc(100% - 70px);
-    transition: margin-left 0.23s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.sidebar:hover ~ .main-content, .sidebar.expanded ~ .main-content {
-    margin-left: 260px;
-    max-width: calc(100% - 260px);
-}
-.app-section { display: none; }
-.app-section.active { display: block; }
+        /* ================= CONFIGURAÇÕES ================= */
+        .config-box { background: white; padding: 25px; border-radius: 18px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); max-width: 650px; }
+        .config-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 18px; }
+        .config-group label { font-weight: bold; color: #002b73; font-size: 15px; }
+        .config-group input, .config-group textarea { padding: 12px; border: 2px solid #ccc; border-radius: 10px; font-size: 15px; outline: none; }
+        .config-group textarea { height: 140px; resize: vertical; font-family: monospace; }
+        .btn-config-save { background: #002b73; color: white; padding: 12px 25px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; }
 
-/* ================= GRIDS E COMPONENTES ================= */
-.header{ display:flex; align-items:center; justify-content:space-between; position:relative; margin-bottom:25px; border-bottom: 2px solid #002b73; padding-bottom: 15px;}
-.title-container h1{ color:#002b73; font-size:30px; margin:0;}
-.title-container h2{ font-size:14px; color:#3b5ea8; margin-top:4px; font-weight:normal;}
+        /* ================= MODAL CUSTOMIZADO ================= */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; z-index: 10000; }
+        .modal-box { background: linear-gradient(180deg,#0f4fb8,#002b73); padding: 25px; border-radius: 18px; width: min(450px, 90vw); max-height: 85vh; overflow-y: auto; box-shadow: 0 10px 25px rgba(0,0,0,0.3); color: white; border: 2px solid #2f7fff; }
+        .modal-box h3 { margin-bottom: 15px; font-size: 22px; color: #fff; border-bottom: 2px solid #e4001b; padding-bottom: 8px; }
+        .modal-group { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
+        .modal-group label { font-size: 14px; font-weight: bold; color: #7fb2ff; }
+        .modal-group input { padding: 12px; border-radius: 8px; border: 2px solid #2f7fff; background: #001c4a; color: white; font-size: 15px; outline: none; }
+        .modal-buttons { display: flex; gap: 10px; margin-top: 20px; }
+        .modal-buttons button { flex: 1; padding: 14px; border: none; border-radius: 10px; font-size: 15px; font-weight: bold; cursor: pointer; color: white; }
+        .btn-save { background: #00b140; }
+        .btn-cancel { background: #d91c1c; }
 
-.top-bar{ display:flex; flex-wrap:wrap; gap:10px; margin-bottom:15px;}
-.top-bar input,.top-bar select{ padding:12px; border:2px solid #0f4fb8; border-radius:12px; font-size:16px; background:white; color:#001c4a; font-weight:bold;}
-.top-bar input{ flex:1;}
-.summary-bar{ display:flex; flex-wrap:wrap; gap:15px; margin-bottom:20px; background:#002b73; padding:12px 20px; border-radius:12px; color:white; font-weight:bold; font-size:16px; box-shadow:0 2px 8px rgba(0,0,0,.15); align-items:center;}
-.summary-item{ display:flex; align-items:center; gap:8px;}
-.summary-value{ background:#e4001b; padding:4px 10px; border-radius:8px; font-size:15px;}
-.summary-status-container{ display:flex; gap:12px; margin-left:auto; background:rgba(0,0,0,0.2); padding:4px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.1);}
-.status-badge{ font-size:14px; display:flex; align-items:center; gap:4px;}
-
-#container{ display:grid; grid-template-columns:repeat(auto-fill,minmax(310px,1fr)); gap:16px;}
-.card{ 
-    position:relative; 
-    background:linear-gradient(180deg,#0f4fb8,#002b73); 
-    border-radius:18px; 
-    padding:16px; 
-    box-shadow:0 4px 12px rgba(0,0,0,.22);
-    display:flex; flex-direction:column; justify-content:space-between;
-    contain: content;
-}
-.card-header{ display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px; min-height:48px;}
-.item-name{ font-weight:bold; font-size:19px; color:white; line-height:1.2; padding-right:10px;}
-.gear{ cursor:pointer; font-size:22px; color:white; line-height:1;}
-.item-details{ background:rgba(0, 28, 74, 0.6); border-radius:10px; padding:10px; margin-bottom:14px; font-size:13px; display:flex; flex-direction:column; gap:6px;}
-.item-details p{ display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:4px;}
-.item-details p:last-child{ border:none; padding:0; }
-.item-details span{ font-weight:bold; color:#7fb2ff; min-width:85px; }
-.card-text-value{ color: white; font-size: 13px; text-align: right; word-break: break-all; padding-left: 10px;}
-.counter{ display:flex; justify-content:center; align-items:center; gap:15px; margin-bottom:10px;}
-.counter button{ width:46px; height:46px; font-size:24px; font-weight:bold; color:white; border:none; border-radius:12px; cursor:pointer;}
-.counter button:first-child{ background:#d91c1c;}
-.counter button:last-child{ background:#00b140;}
-.value{ font-size:28px; font-weight:bold; min-width:80px; text-align:center; background:#001c4a; color:white; padding:8px 12px; border-radius:12px; border:2px solid #2f7fff;}
-.status-warning{ text-align:center; font-weight:bold; font-size:14px; margin-bottom:14px; padding:6px; border-radius:8px; background:rgba(0, 0, 0, 0.2);}
-.actions{ display:flex; gap:10px;}
-.actions button{ flex:1; padding:12px; border:none; border-radius:12px; font-size:14px; font-weight:bold; color:white; cursor:pointer;}
-.actions button:first-child{ background:#12a150;}
-.actions button:last-child{ background:#d91c1c;}
-#addItemBtn{ background:#001c4a; color:white; border:none; border-radius:12px; padding:12px 20px; font-size:16px; font-weight:bold; cursor:pointer;}
-.delete-item{ position:absolute; top:4px; right:4px; width:20px; height:20px; border-radius:50%; border:1px solid #ff0000; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:11px; font-weight:bold; background:#ff0000; color:white; z-index:99; line-height:1;}
-
-/* ================= PAINEL DO CARRINHO ================= */
-.cart-grid { display: flex; flex-direction: column; gap: 15px; margin-top: 15px;}
-.cart-card {
-    background: white;
-    border-radius: 14px;
-    padding: 20px;
-    border-left: 6px solid #e4001b;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.05);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-.cart-card.low-stock { border-left-color: #ffcc00; }
-.cart-info h4 { font-size: 18px; color: #002b73; margin-bottom: 5px; }
-.cart-info p { font-size: 14px; color: #555; }
-.cart-info span.reason { font-weight: bold; padding: 2px 6px; border-radius: 4px; font-size: 12px; }
-.btn-order {
-    background: #00b140; color: white; border: none; padding: 12px 24px;
-    border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 15px;
-    display: flex; align-items: center; gap: 8px; transition: background 0.2s;
-}
-
-/* ================= CONFIGURAÇÕES ================= */
-.config-box { background: white; padding: 25px; border-radius: 18px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); max-width: 650px;}
-.config-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 18px;}
-.config-group label { font-weight: bold; color: #002b73; font-size: 15px;}
-.config-group input, .config-group textarea { padding: 12px; border: 2px solid #ccc; border-radius: 10px; font-size: 15px; outline: none;}
-.config-group textarea { height: 140px; resize: vertical; font-family: monospace;}
-.btn-config-save { background: #002b73; color: white; padding: 12px 25px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer;}
-
-/* ================= MODAL CUSTOMIZADO ================= */
-.modal-overlay{ position:fixed; inset:0; background:rgba(0,0,0,0.6); display:none; align-items:center; justify-content:center; z-index:10000;}
-.modal-box{ background:linear-gradient(180deg,#0f4fb8,#002b73); padding:25px; border-radius:18px; width:min(450px,90vw); max-height: 85vh; overflow-y: auto; box-shadow:0 10px 25px rgba(0,0,0,0.3); color:white; border:2px solid #2f7fff;}
-.modal-box h3{ margin-bottom:15px; font-size:22px; color:#fff; border-bottom:2px solid #e4001b; padding-bottom:8px;}
-.modal-group{ display:flex; flex-direction:column; gap:5px; margin-bottom:12px; }
-.modal-group label{ font-size:14px; font-weight:bold; color:#7fb2ff; }
-.modal-group input{ padding:12px; border-radius:8px; border:2px solid #2f7fff; background:#001c4a; color:white; font-size:15px; outline:none;}
-.modal-buttons{ display:flex; gap:10px; margin-top:20px; }
-.modal-buttons button{ flex:1; padding:14px; border:none; border-radius:10px; font-size:15px; font-weight:bold; cursor:pointer; color:white; }
-.btn-save{ background:#00b140; }
-.btn-cancel{ background:#d91c1c; }
-
-/* ================= ADAPTAÇÕES ESPECÍFICAS PARA CELULAR SEM QUEBRAR O LAYOUT DE PC ================= */
-@media(max-width:768px){
-    /* Mantém a estrutura lateral do PC, mas ajusta margens para telas menores */
-    .main-content { padding: 15px; }
-    .title-container h1 { font-size: 23px; }
-    
-    .top-bar { flex-direction: column; gap: 8px; }
-    .top-bar input, .top-bar select, #addItemBtn { width: 100%; padding: 14px; }
-    
-    .summary-bar { flex-direction: column; align-items: flex-start; gap: 10px; }
-    .summary-status-container { margin-left: 0; width: 100%; justify-content: space-between; }
-    
-    /* Grid vira 1 coluna no celular para não espremer os cards */
-    #container { grid-template-columns: 1fr; }
-    
-    .cart-card { flex-direction: column; align-items: flex-start; gap: 14px; }
-    .btn-order { width: 100%; justify-content: center; }
-}
-</style></head>
+        /* ================= ADAPTAÇÕES CELULAR ================= */
+        @media(max-width:768px) {
+            .main-content { padding: 15px; }
+            .title-container h1 { font-size: 23px; }
+            .top-bar { flex-direction: column; gap: 8px; }
+            .top-bar input, .top-bar select, #addItemBtn { width: 100%; padding: 14px; }
+            .summary-bar { flex-direction: column; align-items: flex-start; gap: 10px; }
+            .summary-status-container { margin-left: 0; width: 100%; justify-content: space-between; }
+            #container { grid-template-columns: 1fr; }
+            .cart-card { flex-direction: column; align-items: flex-start; gap: 14px; }
+            .btn-order { width: 100%; justify-content: center; }
+        }
+    </style>
+</head>
 <body>
 
 <div id="loginScreen">
@@ -253,7 +147,6 @@ body{    background:#e9eef7;    display:flex; min-height:100vh; overflow-x: hidd
     </div>
 </div>
 
-<!-- Barra lateral reativa tanto para Desktop quanto para cliques no Mobile -->
 <div class="sidebar" id="appSidebar" onclick="toggleSidebarMobile(event)">
     <div class="sidebar-brand">
         <img src="bimbo-logo.png" alt="Bimbo">
@@ -273,7 +166,6 @@ body{    background:#e9eef7;    display:flex; min-height:100vh; overflow-x: hidd
 </div>
 
 <div class="main-content">
-    <!-- DASHBOARD -->
     <div id="section-dashboard" class="app-section active">
         <div class="header">
             <div class="title-container">
@@ -310,7 +202,6 @@ body{    background:#e9eef7;    display:flex; min-height:100vh; overflow-x: hidd
         <div id="container"></div>
     </div>
 
-    <!-- CARRINHO -->
     <div id="section-cart" class="app-section">
         <div class="header">
             <div class="title-container">
@@ -321,7 +212,6 @@ body{    background:#e9eef7;    display:flex; min-height:100vh; overflow-x: hidd
         <div class="cart-grid" id="cartContainer"></div>
     </div>
 
-    <!-- CONFIGURAÇÕES -->
     <div id="section-settings" class="app-section">
         <div class="header">
             <div class="title-container">
@@ -346,7 +236,6 @@ body{    background:#e9eef7;    display:flex; min-height:100vh; overflow-x: hidd
     </div>
 </div>
 
-<!-- MODAL CADASTRAR/EDITAR -->
 <div id="itemModal" class="modal-overlay">
     <div class="modal-box">
         <h3 id="modalTitle">Novo Item</h3>
@@ -368,8 +257,6 @@ body{    background:#e9eef7;    display:flex; min-height:100vh; overflow-x: hidd
 </div>
 
 <script>
-const DB_LOCAL_KEY = "estoque_teste_local_v2500";
-const DB_CONFIG_KEY = "estoque_config_local_v3";
 const ACCESS_PASSWORD = "Almoxarifado@Bimbo2026";
 
 let items = [];
@@ -389,7 +276,6 @@ function checkPassword(){
     } else { document.getElementById("errorMsg").innerText = "Senha incorreta"; }
 }
 
-/* Gerenciador touch para expandir/recuar a barra lateral no celular ao clicar nela */
 function toggleSidebarMobile(e) {
     if(window.innerWidth <= 768) {
         const sidebar = document.getElementById("appSidebar");
@@ -405,15 +291,43 @@ function updateData(newItemsArray) {
     applyFilterAndSort();
 }
 
+// Cria automaticamente 2500 contadores caso o banco esteja vazio
+function seedDatabase() {
+    if(!confirm("Banco de dados vazio! Deseja gerar automaticamente os 2.500 itens iniciais (Item 1 ao Item 2500)?")) return;
+    
+    let initialBatch = {};
+    for (let i = 1; i <= 2500; i++) {
+        initialBatch[i] = {
+            id: i,
+            name: `Item ${i}`,
+            brand: "",
+            model: "",
+            supplier: "",
+            contact: "",
+            location: "",
+            minQty: 0,
+            qty: 0
+        };
+    }
+    window.fb.set(window.fb.ref(window.fb.db, 'estoque/'), initialBatch);
+}
+
 function init() {
-    // Escuta o estoque em tempo real no Firebase
+    initialized = true;
+    
+    // Escuta o estoque em tempo real
     window.fb.onValue(window.fb.ref(window.fb.db, 'estoque/'), (snapshot) => {
         const data = snapshot.val();
-        items = data ? Object.values(data) : [];
+        if (!data) {
+            items = [];
+            seedDatabase();
+        } else {
+            items = Object.values(data);
+        }
         updateData(items);
     });
 
-    // Escuta as configurações no Firebase
+    // Escuta as configurações
     window.fb.onValue(window.fb.ref(window.fb.db, 'config/'), (snapshot) => {
         configs = snapshot.val() || {
             buyerEmail: "almoxarifado.bimbo@gmail.com",
@@ -423,15 +337,8 @@ function init() {
         document.getElementById("cfgEmailTemplate").value = configs.template;
     });
 }
-function save() {
-    // Transforma o array 'items' num objeto para o Firebase entender
-    const dataToSave = {};
-    items.forEach(i => dataToSave[i.id] = i);
-    
-    // Envia para o Firebase
-    window.fb.set(window.fb.ref(window.fb.db, 'estoque/'), dataToSave);
-}
-function find(id){ return items.find(i=>i.id===id); }
+
+function find(id){ return items.find(i=>i.id===parseInt(id)); }
 
 function switchTab(tabId, btn) {
     document.querySelectorAll('.app-section').forEach(s => s.classList.remove('active'));
@@ -439,7 +346,6 @@ function switchTab(tabId, btn) {
     document.getElementById(`section-${tabId}`).classList.add('active');
     btn.classList.add('active');
     
-    // Fecha a barra lateral automaticamente no celular após escolher uma aba
     document.getElementById("appSidebar").classList.remove("expanded");
     window.scrollTo({top: 0});
 }
@@ -447,9 +353,10 @@ function switchTab(tabId, btn) {
 function saveSettings() {
     configs.buyerEmail = document.getElementById("cfgBuyerEmail").value.trim();
     configs.template = document.getElementById("cfgEmailTemplate").value;
-    localStorage.setItem(DB_CONFIG_KEY, JSON.stringify(configs));
-    alert("Configurações salvas com sucesso!");
-    applyFilterAndSort();
+    
+    window.fb.set(window.fb.ref(window.fb.db, 'config/'), configs)
+        .then(() => alert("Configurações salvas no Firebase!"))
+        .catch(err => alert("Erro ao salvar configurações: " + err.message));
 }
 
 function preCalculatedTotalsAndCart() {
@@ -460,6 +367,7 @@ function preCalculatedTotalsAndCart() {
 
     for(let i=0; i<items.length; i++) {
         const item = items[i];
+        if(!item) continue;
         const minQty = item.minQty || 0;
         totalQty += (item.qty || 0);
 
@@ -520,7 +428,6 @@ function applyFilterAndSort() {
     else if (sort === "qtyDesc") filteredList.sort((a,b)=>b.qty-a.qty);
 
     document.getElementById("totalItems").innerText = filteredList.length;
-    
     document.getElementById("container").innerHTML = "";
     itemsDisplayedCount = 0;
     loadMoreItems();
@@ -599,17 +506,17 @@ function triggerSemiAutoPurchase(id) {
 function changeQty(id,v){    
     const item = find(id); if(!item) return;
     item.qty += v; if(item.qty < 0) item.qty = 0;    
-    save(); updateData(items);
+    window.fb.update(window.fb.ref(window.fb.db, 'estoque/' + id), { qty: item.qty });
 }
 function addAmount(id){    
     const amount = parseInt(prompt("Quantidade para adicionar:")); if(isNaN(amount)||amount<=0) return;    
-    const item = find(id); if(item) { item.qty += amount; save(); updateData(items); }
+    const item = find(id); if(item) { item.qty += amount; window.fb.update(window.fb.ref(window.fb.db, 'estoque/' + id), { qty: item.qty }); }
 }
 function removeAmount(id){    
     const amount = parseInt(prompt("Quantidade para retirar:")); if(isNaN(amount)||amount<=0) return;    
     const item = find(id); if(!item) return;
     item.qty -= amount; if(item.qty < 0) item.qty = 0;    
-    save(); updateData(items);
+    window.fb.update(window.fb.ref(window.fb.db, 'estoque/' + id), { qty: item.qty });
 }
 
 function openItemModal() {
@@ -649,10 +556,14 @@ function saveModalItem() {
     
     if(!name) { alert("O nome do item é obrigatório!"); return; }
 
-    // Define o ID: se for edição usa o existente, se for novo gera um timestamp
     const itemId = id ? parseInt(id) : Date.now();
+    let currentQty = 0;
+    
+    if(id) {
+        const existingItem = find(id);
+        if(existingItem) currentQty = existingItem.qty;
+    }
 
-    // Cria o objeto com os dados do formulário
     const itemData = {
         id: itemId,
         name: name,
@@ -662,25 +573,20 @@ function saveModalItem() {
         contact: document.getElementById("modalContact").value.trim(),
         location: document.getElementById("modalLocation").value.trim(),
         minQty: minQty,
-        // Se for novo, inicia com qty 0; se for edição, mantém o que já tinha
-        qty: id ? find(parseInt(id)).qty : 0 
+        qty: currentQty 
     };
 
-    // ENVIA PARA O FIREBASE
-    // O update vai criar o item se não existir, ou atualizar se já existir
-    window.fb.update(window.fb.ref(window.fb.db, 'estoque/' + itemId), itemData);
-
-    closeItemModal();
-    // NÃO precisa de save() nem updateData() aqui!
-    // O Firebase avisará o 'init()' automaticamente que algo mudou.
+    window.fb.update(window.fb.ref(window.fb.db, 'estoque/' + itemId), itemData)
+        .then(() => {
+            closeItemModal();
+        })
+        .catch(err => alert("Erro ao salvar item: " + err.message));
 }
+
 function deleteItem(id){    
     const item = find(id); 
     if(!item) return;
-    
     if(!confirm(`Excluir "${item.name}" ?`)) return;    
-    
-    // Remove do Firebase (o init() vai atualizar a tela sozinho)
     window.fb.remove(window.fb.ref(window.fb.db, 'estoque/' + id));
 }
 
@@ -692,7 +598,6 @@ document.addEventListener("keydown",(e)=>{
     if(e.key === "Enter" && document.getElementById("loginScreen").style.display !== "none") checkPassword();
 });
 
-// Fecha a sidebar se o usuário clicar no conteúdo principal (Mobile UX)
 document.querySelector(".main-content").addEventListener("click", () => {
     if(window.innerWidth <= 768) {
         document.getElementById("appSidebar").classList.remove("expanded");
