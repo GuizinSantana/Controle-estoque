@@ -19,8 +19,8 @@ body{    background:#e9eef7;    display:flex; min-height:100vh; overflow:hidden;
 }
 .sidebar:hover { width: 260px; }
 .sidebar-brand{ padding: 0 0 20px 0; border-bottom: 1px solid rgba(255,255,255,0.1); text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100px;}
-.sidebar-brand img{ width: 55px; height: auto; transition: width 0.2s ease; }
-.sidebar:hover .sidebar-brand img { width: 75px; }
+.sidebar-brand img{ width: 55px; height: auto; transition: width 0.2s ease; } /* Aumentado de 45px para 55px */
+.sidebar:hover .sidebar-brand img { width: 75px; } /* Aumentado proporcionalmente no hover */
 .sidebar-brand h3{ font-size: 16px; color: #7fb2ff; font-weight: normal; margin-top: 5px; opacity: 0; }
 .sidebar:hover .sidebar-brand h3 { opacity: 1; }
 .sidebar-menu { display: flex; flex-direction: column; gap: 8px; margin-top: 20px; padding: 0 10px;}
@@ -114,27 +114,6 @@ body{    background:#e9eef7;    display:flex; min-height:100vh; overflow:hidden;
 .modal-buttons button{ flex:1; padding:10px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; color:white; }
 .btn-save{ background:#00b140; }
 .btn-cancel{ background:#d91c1c; }
-
-/* RESPONSIVIDADE TELEMÓVEL */
-@media(max-width:768px){
-    body { flex-direction: column-reverse; }
-    .sidebar { width: 100%; height: 65px; position: relative; bottom: 0; left: 0; padding: 0; flex-direction: row; border-top: 2px solid #0f4fb8; }
-    .sidebar:hover { width: 100%; }
-    .sidebar-brand { display: none; }
-    .sidebar-menu { flex-direction: row; width: 100%; height: 100%; margin-top: 0; padding: 0; gap: 0; }
-    .menu-btn { flex: 1; flex-direction: column; justify-content: center; align-items: center; padding: 5px; border-radius: 0; font-size: 11px; text-align: center; }
-    .menu-btn .icon { min-width: unset; margin-bottom: 2px; }
-    .menu-btn .btn-text { opacity: 1 !important; margin-left: 0; font-size: 11px; }
-    .menu-btn span.badge { top: 8px; right: calc(50% - 22px); transform: none; }
-    .sidebar:not(:hover) .menu-btn span.badge { top: 8px; right: calc(50% - 22px); font-size: 10px; padding: 2px 5px; }
-    
-    .main-content { margin-left: 0; max-width: 100%; padding: 12px; height: calc(100vh - 65px); }
-    .sidebar:hover + .main-content { margin-left: 0; max-width: 100%; }
-    .top-bar { flex-direction: column; gap: 8px; }
-    .top-bar input, .top-bar select, #addItemBtn { width: 100%; }
-    .summary-bar { flex-wrap: wrap; gap: 10px; font-size: 13px; }
-    .summary-status-container { width: 100%; margin-left: 0; justify-content: space-between; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 6px; }
-}
 </style></head>
 <body>
 
@@ -213,24 +192,8 @@ body{    background:#e9eef7;    display:flex; min-height:100vh; overflow:hidden;
     </div>
 </div>
 
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
-import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
-
-const firebaseConfig = {
-    apiKey: "AIzaSyCrSgho0Y05w8JBZze612-nt5DjMOfBUrs",
-    authDomain: "controle-estoque-c3001.firebaseapp.com",
-    databaseURL: "https://controle-estoque-c3001-default-rtdb.firebaseio.com",
-    projectId: "controle-estoque-c3001",
-    storageBucket: "controle-estoque-c3001.appspot.com",
-    messagingSenderId: "944420672508",
-    appId: "1:944420672508:web:e5f4ec0a3c498b2b2c1879"
-};
-
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
-
-const DB_PATH = "estoque";
+<script>
+const DB_LOCAL_KEY = "estoque_teste_local_v4_2500";
 const DB_CONFIG_KEY = "estoque_config_local_v4";
 const ACCESS_PASSWORD = "Almoxarifado@Bimbo2026";
 
@@ -250,42 +213,35 @@ function checkPassword(){
         init();
     } else { document.getElementById("errorMsg").innerText = "Senha incorreta"; }
 }
-window.checkPassword = checkPassword;
 
 function init(){
-    const dbRef = ref(db, DB_PATH);
-
-    // Escuta alterações na nuvem em tempo real
-    onValue(dbRef, (snapshot) => {
-        if(snapshot.exists()){
-            items = snapshot.val();
-            if(!Array.isArray(items)) {
-                items = Object.values(items);
-            }
-        } else {
-            // Se o Firebase estiver completamente vazio, gera os 2500 itens iniciais na nuvem
-            items = [];
-            for(let i = 1; i <= 2500; i++){                
-                items.push({ 
-                    id: i, name: `Item ${i}`, brand: 'Bimbo Reforçado', model: `MOD-${1000+i}`,
-                    supplier: 'Fornecedor Padrão', contact: 'compras@fornecedor.com', location: `A-01-${Math.ceil(i/100)}-${i%100}`, qty: 5, minQty: 10
-                });            
-            }
-            set(dbRef, items);
+    const localData = localStorage.getItem(DB_LOCAL_KEY);
+    if(localData){            
+        try { items = JSON.parse(localData); } catch(e) { items = []; }
+    }
+    
+    if(!items || items.length < 2500){            
+        items = [];
+        for(let i = 1; i <= 2500; i++){                
+            items.push({ 
+                id: i, name: `Item ${i}`, brand: 'Bimbo Reforçado', model: `MOD-${1000+i}`,
+                supplier: 'Fornecedor Padrão', contact: 'compras@fornecedor.com', location: `A-01-${Math.ceil(i/100)}-${i%100}`, qty: 5, minQty: 10
+            });            
         }
-        
-        const localConfig = localStorage.getItem(DB_CONFIG_KEY);
-        if(localConfig){ try{ configs = JSON.parse(localConfig); } catch(e){ setDefaultConfigs(); } } 
-        else { setDefaultConfigs(); }
-        
-        document.getElementById("cfgBuyerEmail").value = configs.buyerEmail || "";
-        document.getElementById("cfgEmailTemplate").value = configs.template || "";
+        localStorage.setItem(DB_LOCAL_KEY, JSON.stringify(items));      
+    }
+    
+    const localConfig = localStorage.getItem(DB_CONFIG_KEY);
+    if(localConfig){ try{ configs = JSON.parse(localConfig); } catch(e){ setDefaultConfigs(); } } 
+    else { setDefaultConfigs(); }
+    
+    document.getElementById("cfgBuyerEmail").value = configs.buyerEmail || "";
+    document.getElementById("cfgEmailTemplate").value = configs.template || "";
 
-        updateColumnsCount();
-        applyFiltersAndSort();
-    });
-
+    updateColumnsCount();
     window.addEventListener('resize', () => { updateColumnsCount(); puleRender(); });
+    
+    applyFiltersAndSort();
 }
 
 function setDefaultConfigs() {
@@ -293,10 +249,7 @@ function setDefaultConfigs() {
     localStorage.setItem(DB_CONFIG_KEY, JSON.stringify(configs));
 }
 
-// Salva e atualiza diretamente no nó do Firebase
-function save(){ set(ref(db, DB_PATH), items); }
-window.save = save;
-
+function save(){ localStorage.setItem(DB_LOCAL_KEY, JSON.stringify(items)); }
 function find(id){ return items.find(i=>i && i.id===id); }
 
 function switchTab(tabId, btn) {
@@ -306,7 +259,6 @@ function switchTab(tabId, btn) {
     btn.classList.add('active');
     if(tabId === 'dashboard') puleRender();
 }
-window.switchTab = switchTab;
 
 function updateColumnsCount() {
     const w = window.innerWidth - (window.innerWidth > 768 ? 260 : 70);
@@ -450,26 +402,23 @@ function puleRender() {
     }
 }
 
-function onViewportScroll() { window.requestAnimationFrame(puleRender); }
-window.onViewportScroll = onViewportScroll;
+function onViewportScroll() {
+    window.requestAnimationFrame(puleRender);
+}
 
 function changeQty(id,v){    
     const item = find(id); if(!item) return;
     item.qty = Math.max(0, (item.qty || 0) + v); save();
+    updateSummaryData(); puleRender();
 }
-window.changeQty = changeQty;
-
 function addAmount(id){    
     const amount = parseInt(prompt("Adicionar quantidade:")); if(isNaN(amount)||amount<=0) return;    
-    const item = find(id); if(item) { item.qty += amount; save(); }
+    const item = find(id); if(item) { item.qty += amount; save(); updateSummaryData(); puleRender(); }
 }
-window.addAmount = addAmount;
-
 function removeAmount(id){    
     const amount = parseInt(prompt("Retirar quantidade:")); if(isNaN(amount)||amount<=0) return;    
-    const item = find(id); if(item) { item.qty = Math.max(0, item.qty - amount); save(); }
+    const item = find(id); if(item) { item.qty = Math.max(0, item.qty - amount); save(); updateSummaryData(); puleRender(); }
 }
-window.removeAmount = removeAmount;
 
 function openItemModal() {
     document.getElementById("modalTitle").innerText = "Novo Item";
@@ -483,7 +432,6 @@ function openItemModal() {
     document.getElementById("modalMinQty").value = "0";
     document.getElementById("itemModal").style.display = "flex";
 }
-window.openItemModal = openItemModal;
 
 function openRenameModal(id) {
     const item = find(id); if(!item) return;
@@ -498,10 +446,8 @@ function openRenameModal(id) {
     document.getElementById("modalMinQty").value = item.minQty;
     document.getElementById("itemModal").style.display = "flex";
 }
-window.openRenameModal = openRenameModal;
 
 function closeItemModal() { document.getElementById("itemModal").style.display = "none"; }
-window.closeItemModal = closeItemModal;
 
 function saveModalItem() {
     const id = document.getElementById("modalItemId").value;
@@ -521,25 +467,22 @@ function saveModalItem() {
         const item = find(parseInt(id));
         if(item) Object.assign(item, data);
     } else {
-        const newId = items.length ? Math.max(...items.map(i => i ? i.id : 0)) + 1 : 1;
+        const newId = items.length ? Math.max(...items.map(i => i.id)) + 1 : 1;
         items.push({ id: newId, qty: 0, ...data });
     }
-    save(); closeItemModal();
+    save(); closeItemModal(); applyFiltersAndSort();
 }
-window.saveModalItem = saveModalItem;
 
 function deleteItem(id){    
     if(!confirm("Excluir item?")) return;    
-    items = items.filter(i => i && i.id !== id); save();
+    items = items.filter(i => i.id !== id); save(); applyFiltersAndSort();
 }
-window.deleteItem = deleteItem;
 
 function triggerSemiAutoPurchase(id) {
     const item = find(id); if (!item || !item.contact) return alert("Cadastre o e-mail do fornecedor!");
     let bodyText = configs.template.replace(/{fornecedor}/g, item.supplier).replace(/{item}/g, item.name).replace(/{modelo}/g, item.model);
     window.location.href = `mailto:${item.contact}?cc=${configs.buyerEmail}&subject=Pedido Bimbo&body=${encodeURIComponent(bodyText)}`;
 }
-window.triggerSemiAutoPurchase = triggerSemiAutoPurchase;
 
 function saveSettings() {
     configs.buyerEmail = document.getElementById("cfgBuyerEmail").value.trim();
@@ -547,7 +490,6 @@ function saveSettings() {
     localStorage.setItem(DB_CONFIG_KEY, JSON.stringify(configs));
     alert("Salvo!");
 }
-window.saveSettings = saveSettings;
 
 document.getElementById("search").addEventListener("input", () => {
     clearTimeout(searchTimeout);
@@ -556,10 +498,7 @@ document.getElementById("search").addEventListener("input", () => {
 document.getElementById("sort").addEventListener("change", applyFiltersAndSort);
 document.getElementById("filter").addEventListener("change", applyFiltersAndSort);
 
-if(sessionStorage.getItem("bimboLogged")){
-    document.getElementById("loginScreen").style.display = "none";
-    init();
-}
+if(sessionStorage.getItem("bimboLogged")){ document.getElementById("loginScreen").style.display = "none"; init(); }
 </script>
 </body>
 </html>
