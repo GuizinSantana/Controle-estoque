@@ -36,7 +36,7 @@
         #errorMsg { margin-top: 18px; text-align: center; color: #ffd2d2; font-size: 22px; font-weight: bold; }
 
         /* ================= BARRA LATERAL ================= */
-        .sidebar { width: 70px; background: #001c4a; color: white; display: flex; flex-direction: column; padding: 20px 0; position: fixed; top: 0; bottom: 0; left: 0; z-index: 1000; transition: width 0.23s cubic-bezier(0.4, 0, 0.2, 1); overflow-x: hidden; overflow-y: auto; white-space: nowrap; box-shadow: 4px 0 10px rgba(0,0,0,0.2); contain: padding; transform: translateZ(0); will-change: width; }
+        .sidebar { width: 70px; background: #001c4a; color: white; display: flex; flex-direction: column; padding: 20px 0; position: fixed; top: 0; bottom: 0; left: 0; z-index: 1001; transition: width 0.23s cubic-bezier(0.4, 0, 0.2, 1); overflow-x: hidden; overflow-y: auto; white-space: nowrap; box-shadow: 4px 0 10px rgba(0,0,0,0.2); contain: padding; transform: translateZ(0); will-change: width; }
         .sidebar:hover, .sidebar.expanded { width: 260px; }
         .sidebar-brand { padding: 0 0 15px 0; border-bottom: 1px solid rgba(255,255,255,0.1); text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 110px; }
         .sidebar-brand img { width: 45px; height: auto; transition: width 0.23s ease; display: block; }
@@ -62,9 +62,12 @@
         .header { display: flex; align-items: center; justify-content: space-between; position: relative; margin-bottom: 25px; border-bottom: 2px solid #002b73; padding-bottom: 15px; }
         .title-container h1 { color: #002b73; font-size: 30px; margin: 0; }
         .title-container h2 { font-size: 14px; color: #3b5ea8; margin-top: 4px; font-weight: normal; }
-        .top-bar { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; }
+        
+        /* BARRAS DE PESQUISA FIXAS (STICKY) */
+        .top-bar { position: sticky; top: 0; z-index: 100; background: #e9eef7; padding: 15px 0; display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; border-bottom: 1px solid rgba(0,0,0,0.05); }
         .top-bar input, .top-bar select { padding: 12px; border: 2px solid #0f4fb8; border-radius: 12px; font-size: 16px; background: white; color: #001c4a; font-weight: bold; }
         .top-bar input { flex: 1; }
+        
         .summary-bar { display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 20px; background: #002b73; padding: 12px 20px; border-radius: 12px; color: white; font-weight: bold; font-size: 16px; box-shadow: 0 2px 8px rgba(0,0,0,.15); align-items: center; }
         .summary-item { display: flex; align-items: center; gap: 8px; }
         .summary-value { background: #e4001b; padding: 4px 10px; border-radius: 8px; font-size: 15px; }
@@ -80,7 +83,7 @@
         .item-details p { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 4px; }
         .item-details p:last-child { border: none; padding: 0; }
         .item-details span { font-weight: bold; color: #7fb2ff; min-width: 85px; }
-        .card-text-value { color: white; font-size: 13px; text-align: right; word-break: break-all; padding-left: 10px; }
+        .card-text-value { color: white; font-size: 13px; text-align: right; word-break: break-all; padding-left: 10px; display: inline-block; }
         .counter { display: flex; justify-content: center; align-items: center; gap: 15px; margin-bottom: 10px; }
         .counter button { width: 46px; height: 46px; font-size: 24px; font-weight: bold; color: white; border: none; border-radius: 12px; cursor: pointer; }
         .counter button:first-child { background: #d91c1c; }
@@ -127,7 +130,7 @@
         @media(max-width:768px) {
             .main-content { padding: 15px; }
             .title-container h1 { font-size: 23px; }
-            .top-bar { flex-direction: column; gap: 8px; }
+            .top-bar { position: relative; padding: 10px 0; }
             .top-bar input, .top-bar select, #addItemBtn { width: 100%; padding: 14px; }
             .summary-bar { flex-direction: column; align-items: flex-start; gap: 10px; }
             .summary-status-container { margin-left: 0; width: 100%; justify-content: space-between; }
@@ -208,6 +211,9 @@
                 <h1>Carrinho de Compras Semiautomático</h1>
                 <h2>Itens críticos que necessitam de pedido imediato</h2>
             </div>
+        </div>
+        <div class="top-bar">
+            <input type="text" id="searchCart" placeholder="Pesquisar itens no carrinho (Nome, Marca, Modelo ou Fornecedor)...">
         </div>
         <div class="cart-grid" id="cartContainer"></div>
     </div>
@@ -291,31 +297,53 @@ function updateData(newItemsArray) {
     applyFilterAndSort();
 }
 
-// Cria automaticamente 2500 contadores caso o banco esteja vazio
+// INJEÇÃO DIVIDIDA EM GRUPOS (BATCHES) PARA EVITAR LIMITES DO FIREBASE
 function seedDatabase() {
-    if(!confirm("Banco de dados vazio! Deseja gerar automaticamente os 2.500 itens iniciais (Item 1 ao Item 2500)?")) return;
+    if(!confirm("Banco de dados vazio! Deseja gerar automaticamente os 2.500 itens iniciais (Processado em lotes estáveis)?")) return;
     
-    let initialBatch = {};
-    for (let i = 1; i <= 2500; i++) {
-        initialBatch[i] = {
-            id: i,
-            name: `Item ${i}`,
-            brand: "",
-            model: "",
-            supplier: "",
-            contact: "",
-            location: "",
-            minQty: 0,
-            qty: 0
-        };
+    alert("Iniciando injeção estruturada de dados. Aguarde a confirmação de conclusão...");
+    
+    const TOTAL_ITEMS = 2500;
+    const BATCH_SIZE = 500;
+    let currentId = 1;
+
+    function sendNextBatch() {
+        if (currentId > TOTAL_ITEMS) {
+            alert("Sucesso! Todos os 2.500 itens foram injetados corretamente.");
+            return;
+        }
+
+        let batch = {};
+        let limit = Math.min(currentId + BATCH_SIZE - 1, TOTAL_ITEMS);
+
+        for (let i = currentId; i <= limit; i++) {
+            batch[i] = {
+                id: i,
+                name: `Item ${i}`,
+                brand: "",
+                model: "",
+                supplier: "",
+                contact: "",
+                location: "",
+                minQty: 0,
+                qty: 0
+            };
+        }
+
+        window.fb.update(window.fb.ref(window.fb.db, 'estoque/'), batch)
+            .then(() => {
+                currentId += BATCH_SIZE;
+                setTimeout(sendNextBatch, 600); // Intervalo de estabilidade de escrita
+            })
+            .catch(err => alert("Erro ao semear banco de dados: " + err.message));
     }
-    window.fb.set(window.fb.ref(window.fb.db, 'estoque/'), initialBatch);
+
+    sendNextBatch();
 }
 
 function init() {
     initialized = true;
     
-    // Escuta o estoque em tempo real
     window.fb.onValue(window.fb.ref(window.fb.db, 'estoque/'), (snapshot) => {
         const data = snapshot.val();
         if (!data) {
@@ -327,7 +355,6 @@ function init() {
         updateData(items);
     });
 
-    // Escuta as configurações
     window.fb.onValue(window.fb.ref(window.fb.db, 'config/'), (snapshot) => {
         configs = snapshot.val() || {
             buyerEmail: "almoxarifado.bimbo@gmail.com",
@@ -365,6 +392,9 @@ function preCalculatedTotalsAndCart() {
     cartContainer.innerHTML = "";
     const cartFragment = document.createDocumentFragment();
 
+    const cartSearchInput = document.getElementById("searchCart");
+    const cartSearch = cartSearchInput ? cartSearchInput.value.toLowerCase() : "";
+
     for(let i=0; i<items.length; i++) {
         const item = items[i];
         if(!item) continue;
@@ -376,6 +406,14 @@ function preCalculatedTotalsAndCart() {
         else okCount++;
         
         if (item.qty < minQty) {
+            const matchesCartSearch = !cartSearch || 
+                item.name.toLowerCase().includes(cartSearch) || 
+                (item.brand && item.brand.toLowerCase().includes(cartSearch)) || 
+                (item.model && item.model.toLowerCase().includes(cartSearch)) ||
+                (item.supplier && item.supplier.toLowerCase().includes(cartSearch));
+
+            if (!matchesCartSearch) continue;
+
             const isZero = item.qty === 0;
             const cartCard = document.createElement("div");
             cartCard.className = `cart-card ${!isZero ? 'low-stock' : ''}`;
@@ -397,9 +435,10 @@ function preCalculatedTotalsAndCart() {
     cartContainer.appendChild(cartFragment);
     document.getElementById("cartBadge").innerText = lowCount + zeroCount;
     document.getElementById("totalQty").innerText = totalQty;
-    document.getElementById("countOk").innerText = okCount;
-    document.getElementById("countLow").innerText = lowCount;
-    document.getElementById("countZero").innerText = zeroCount;
+    
+    const cOk = document.getElementById("countOk"); if(cOk) cOk.innerText = okCount;
+    const cLow = document.getElementById("countLow"); if(cLow) cLow.innerText = lowCount;
+    const cZero = document.getElementById("countZero"); if(cZero) cZero.innerText = zeroCount;
 }
 
 function applyFilterAndSort() {
@@ -458,12 +497,12 @@ function loadMoreItems() {
                 <span class="gear" onclick="openRenameModal(${item.id})">⚙️</span>            
             </div>
             <div class="item-details">
-                <p><span>Marca:</span> <div class="card-text-value">${item.brand || '---'}</div></p>
-                <p><span>Modelo:</span> <div class="card-text-value">${item.model || '---'}</div></p>
-                <p><span>Fornecedor:</span> <div class="card-text-value">${item.supplier || '---'}</div></p>
-                <p><span>Contato:</span> <div class="card-text-value">${item.contact || '---'}</div></p>
-                <p><span>Locação:</span> <div class="card-text-value">${item.location || '---'}</div></p>
-                <p><span>Estoque Mín:</span> <div class="card-text-value">${minQty}</div></p>
+                <p><span>Marca:</span> <span class="card-text-value">${item.brand || '---'}</span></p>
+                <p><span>Modelo:</span> <span class="card-text-value">${item.model || '---'}</span></p>
+                <p><span>Fornecedor:</span> <span class="card-text-value">${item.supplier || '---'}</span></p>
+                <p><span>Contato:</span> <span class="card-text-value">${item.contact || '---'}</span></p>
+                <p><span>Locação:</span> <span class="card-text-value">${item.location || '---'}</span></p>
+                <p><span>Estoque Mín:</span> <span class="card-text-value">${minQty}</span></p>
             </div>
             <div class="counter">                
                 <button onclick="changeQty(${item.id},-1)">−</button>                
@@ -593,6 +632,7 @@ function deleteItem(id){
 document.getElementById("search").addEventListener("input", applyFilterAndSort);
 document.getElementById("sort").addEventListener("change", applyFilterAndSort);
 document.getElementById("filter").addEventListener("change", applyFilterAndSort);
+document.getElementById("searchCart").addEventListener("input", preCalculatedTotalsAndCart);
 
 document.addEventListener("keydown",(e)=>{    
     if(e.key === "Enter" && document.getElementById("loginScreen").style.display !== "none") checkPassword();
@@ -606,7 +646,7 @@ document.querySelector(".main-content").addEventListener("click", () => {
 
 if(sessionStorage.getItem("bimboLogged")){    
     document.getElementById("loginScreen").style.display = "none";    
-    init();
+    if(!initialized){ init(); initialized = true; }
 }
 </script>
 </body>
