@@ -550,9 +550,9 @@ function loadMoreItems() {
         const qty = item.qty || 0;
         let statusHTML = "";
 
-        if (qty === 0) statusHTML = `<div class="status-warning" style="color:#ff4d4d;">❌ Estoque Zerado</div>`;
-        else if (minQty > 0 && qty < minQty) statusHTML = `<div class="status-warning" style="color:#ffcc00;">⚠️ Abaixo do Mínimo</div>`;
-        else statusHTML = `<div class="status-warning" style="color:#00b140;">✔️ Controle OK</div>`;
+        if (qty === 0) statusHTML = `<div class="status-warning status-badge-el" style="color:#ff4d4d;">❌ Estoque Zerado</div>`;
+        else if (minQty > 0 && qty < minQty) statusHTML = `<div class="status-warning status-badge-el" style="color:#ffcc00;">⚠️ Abaixo do Mínimo</div>`;
+        else statusHTML = `<div class="status-warning status-badge-el" style="color:#00b140;">✔️ Controle OK</div>`;
 
         const card = document.createElement("div");
         card.className = "card";
@@ -700,6 +700,32 @@ function processPendingFirebaseUpdate(id, initialQty) {
     }, 800);
 }
 
+function updateSingleCardUI(id) {
+    const item = find(id);
+    if (!item) return;
+
+    const label = document.getElementById(`qty-val-${id}`);
+    if (label) label.innerText = item.qty;
+
+    const card = document.getElementById(`card-item-${id}`);
+    if (card) {
+        const statusEl = card.querySelector('.status-badge-el');
+        if (statusEl) {
+            const minQty = item.minQty || 0;
+            if (item.qty === 0) {
+                statusEl.innerHTML = `❌ Estoque Zerado`;
+                statusEl.style.color = '#ff4d4d';
+            } else if (minQty > 0 && item.qty < minQty) {
+                statusEl.innerHTML = `⚠️ Abaixo do Mínimo`;
+                statusEl.style.color = '#ffcc00';
+            } else {
+                statusEl.innerHTML = `✔️ Controle OK`;
+                statusEl.style.color = '#00b140';
+            }
+        }
+    }
+}
+
 function changeQty(id, v) {   
     const item = find(id); if(!item) return;
     
@@ -715,8 +741,8 @@ function changeQty(id, v) {
     if(item.qty < 0) item.qty = 0;    
     pendingUpdates[id].currentQty = item.qty;
 
-    const label = document.getElementById(`qty-val-${id}`);
-    if (label) label.innerText = item.qty;
+    updateSingleCardUI(id);
+    preCalculatedTotalsAndCart();
 
     processPendingFirebaseUpdate(id, pendingUpdates[id].initialQty);
 }
@@ -726,6 +752,8 @@ function addAmount(id){
     const item = find(id); 
     if(item) { 
         item.qty += amount; 
+        updateSingleCardUI(id);
+        preCalculatedTotalsAndCart();
         window.fb.update(window.fb.ref(window.fb.db, 'estoque/' + id), { qty: item.qty }).then(() => {
             showToast();
             logToHistory(id, "Entrada", amount, item.qty);
@@ -737,6 +765,8 @@ function removeAmount(id){
     const amount = parseInt(prompt("Quantidade para retirar:")); if(isNaN(amount)||amount<=0) return;    
     const item = find(id); if(!item) return;
     item.qty -= amount; if(item.qty < 0) item.qty = 0;    
+    updateSingleCardUI(id);
+    preCalculatedTotalsAndCart();
     window.fb.update(window.fb.ref(window.fb.db, 'estoque/' + id), { qty: item.qty }).then(() => {
         showToast();
         logToHistory(id, "Saída", amount, item.qty);
@@ -860,8 +890,18 @@ function deleteItem(id){
 function updateData(newItemsArray) {
     items = newItemsArray;
     preCalculatedTotalsAndCart();
+    
     if (currentActiveTab === 'dashboard') {
-        applyFilterAndSort();
+        const container = document.getElementById("container");
+        if (container && container.children.length === 0) {
+            applyFilterAndSort();
+        } else {
+            items.forEach(item => {
+                if (!pendingUpdates[item.id]) {
+                    updateSingleCardUI(item.id);
+                }
+            });
+        }
     }
 }
 
