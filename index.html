@@ -22,7 +22,7 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
         
-        window.fb = { db, ref, set, update, remove, push, onValue, query, orderByKey, limitToLast };
+        window.fb = { db, ref, set, update, remove, push, query, orderByKey, limitToLast, onValue };
 
         if (sessionStorage.getItem("bimboLogged") === "true") {
             const loginScreen = document.getElementById("loginScreen");
@@ -332,11 +332,14 @@
 
 <script>
 let items = [];
+let historyList = [];
 let configs = {};
 let initialized = false;
 let isSeeding = false; 
 let filteredList = [];
 let itemsDisplayedCount = 0;
+let historyDisplayedCount = 0;
+let currentActiveTab = 'dashboard';
 const ITEMS_PER_PAGE = 30; 
 
 let pendingUpdates = {};
@@ -345,6 +348,7 @@ let scrollTimeout;
 
 function showToast() {
     const toast = document.getElementById("toastNotice");
+    if(!toast) return;
     toast.style.display = "block";
     setTimeout(() => { toast.style.opacity = "1"; }, 10);
     clearTimeout(toastTimeout);
@@ -366,90 +370,37 @@ function checkPassword(){
 function toggleSidebarMobile(e) {
     if(window.innerWidth <= 768) {
         const sidebar = document.getElementById("appSidebar");
-        if(e.target.classList.contains("sidebar") || e.target.closest(".sidebar-brand")) {
+        if(sidebar && (e.target.classList.contains("sidebar") || e.target.closest(".sidebar-brand"))) {
             sidebar.classList.toggle("expanded");
         }
     }
 }
 
-function updateData(newItemsArray) {
-    items = newItemsArray;
-    preCalculatedTotalsAndCart();
-    applyFilterAndSort();
-}
-
-function seedDatabase() {
-    if(!confirm("Banco de dados vazio! Deseja gerar os 2.500 itens estruturais?")) return;
-    isSeeding = true;
-    const TOTAL_ITEMS = 2500;
-    const BATCH_SIZE = 500;
-    let currentId = 1;
-
-    function sendNextBatch() {
-        if (currentId > TOTAL_ITEMS) {
-            isSeeding = false;
-            init(); 
-            return;
-        }
-        let batch = {};
-        let limit = Math.min(currentId + BATCH_SIZE - 1, TOTAL_ITEMS);
-        for (let i = currentId; i <= limit; i++) {
-            batch[i] = { id: i, name: `Item ${i}`, brand: "", model: "", supplier: "", contact: "", location: "", minQty: 0, qty: 0 };
-        }
-        window.fb.update(window.fb.ref(window.fb.db, 'estoque/'), batch).then(() => {
-            currentId += BATCH_SIZE;
-            setTimeout(sendNextBatch, 400);
-        });
-    }
-    sendNextBatch();
-}
-
-function init() {
-    if (initialized) return;
-    initialized = true;
-    
-    window.fb.onValue(window.fb.ref(window.fb.db, 'estoque/'), (snapshot) => {
-        if (isSeeding) return; 
-        const data = snapshot.val();
-        if (!data) { items = []; seedDatabase(); } 
-        else { items = Object.values(data); }
-        updateData(items);
-    });
-
-    window.fb.onValue(window.fb.ref(window.fb.db, 'config/'), (snapshot) => {
-        const data = snapshot.val();
-        configs = data || {};
-        
-        if(!configs.buyerEmail) configs.buyerEmail = "almoxarifado.bimbo@gmail.com";
-        if(!configs.template) configs.template = "[LOGOTIPO: bimbo-logo.png]\n\nPrezado {fornecedor},\n\nIdentificamos que o item [{item} - {modelo}] atingiu o nível crítico em nosso estoque.\nSolicitamos o fornecimento de orçamento para a reposição urgente de {dobro_minimo} unidades.\n\nAtenciosamente,\nAlmoxarifado Grupo Bimbo Brasil.";
-        if(!configs.whatsappTemplate) configs.whatsappTemplate = "*Aviso de Compra - Almoxarifado Bimbo*\n\nOlá {fornecedor}, precisamos formalizar uma solicitação urgente de cotação para o item:\n📦 *{item}*\n🔹 *Modelo:* {modelo}\n📉 *Estoque Atual:* {quantidade} unidades\n🛒 *Quantidade do Pedido (2x Mínimo):* {dobro_minimo} unidades.\n\nPor favor, nos envie a proposta comercial o quanto antes. Obrigado!";
-        
-        document.getElementById("cfgBuyerEmail").value = configs.buyerEmail;
-        document.getElementById("cfgEmailTemplate").value = configs.template;
-        document.getElementById("cfgWhatsappTemplate").value = configs.whatsappTemplate;
-    });
-
-    const historyRef = window.fb.ref(window.fb.db, 'historico/');
-    const optimizedHistoryQuery = window.fb.query(historyRef, window.fb.orderByKey(), window.fb.limitToLast(300));
-
-    window.fb.onValue(optimizedHistoryQuery, (snapshot) => {
-        const data = snapshot.val();
-        renderHistory(data);
-    });
-}
-
 function find(id){ return items.find(i=>i.id===parseInt(id)); }
 
 function switchTab(tabId, btn) {
+    currentActiveTab = tabId;
     document.querySelectorAll('.app-section').forEach(s => s.classList.remove('active'));
     document.querySelectorAll('.menu-btn').forEach(b => b.classList.remove('active'));
-    document.getElementById(`section-${tabId}`).classList.add('active');
-    btn.classList.add('active');
-    document.getElementById("appSidebar").classList.remove("expanded");
+    
+    const section = document.getElementById(`section-${tabId}`);
+    if(section) section.classList.add('active');
+    if(btn) btn.classList.add('active');
+    
+    const sidebar = document.getElementById("appSidebar");
+    if(sidebar) sidebar.classList.remove("expanded");
+    
     window.scrollTo({top: 0});
     
     if (tabId === 'dashboard') {
         applyFilterAndSort();
+    } else if (tabId === 'cart') {
+        preCalculatedTotalsAndCart();
+    } else if (tabId === 'history') {
+        historyDisplayedCount = 0;
+        const container = document.getElementById("historyContainer");
+        if(container) container.innerHTML = "";
+        loadMoreHistory();
     }
 }
 
@@ -466,9 +417,9 @@ function saveSettings() {
 function preCalculatedTotalsAndCart() {
     let okCount = 0, lowCount = 0, zeroCount = 0, totalQty = 0, criticalCartCount = 0;
     const cartContainer = document.getElementById("cartContainer");
-    if (cartContainer) cartContainer.innerHTML = "";
-    const cartFragment = document.createDocumentFragment();
     const cartSearch = document.getElementById("searchCart") ? document.getElementById("searchCart").value.toLowerCase() : "";
+    
+    let cartFragment = (currentActiveTab === 'cart' && cartContainer) ? document.createDocumentFragment() : null;
 
     for(let i=0; i<items.length; i++) {
         const item = items[i];
@@ -483,45 +434,62 @@ function preCalculatedTotalsAndCart() {
 
         if (minQty > 0 && currentQty < minQty) {
             criticalCartCount++;
-            const matchesCartSearch = !cartSearch || 
-                item.name.toLowerCase().includes(cartSearch) || 
-                (item.brand && item.brand.toLowerCase().includes(cartSearch)) || 
-                (item.model && item.model.toLowerCase().includes(cartSearch)) ||
-                (item.supplier && item.supplier.toLowerCase().includes(cartSearch));
+            
+            if (currentActiveTab === 'cart' && cartContainer) {
+                const matchesCartSearch = !cartSearch || 
+                    item.name.toLowerCase().includes(cartSearch) || 
+                    (item.brand && item.brand.toLowerCase().includes(cartSearch)) || 
+                    (item.model && item.model.toLowerCase().includes(cartSearch)) ||
+                    (item.supplier && item.supplier.toLowerCase().includes(cartSearch));
 
-            if (!matchesCartSearch) continue;
-            const isZero = currentQty === 0;
+                if (!matchesCartSearch) continue;
+                const isZero = currentQty === 0;
 
-            const cartCard = document.createElement("div");
-            cartCard.className = `cart-card ${!isZero ? 'low-stock' : ''}`;
-            cartCard.innerHTML = `
-                <div class="cart-info">
-                    <h4>${item.name}</h4>
-                    <p><b>Modelo:</b> ${item.model || '---'} | <b>Fornecedor:</b> ${item.supplier || 'Não Definido'}</p>
-                    <p><b>Qtd Atual:</b> <span style="color:#e4001b; font-weight:bold">${currentQty}</span> | Mínimo: ${minQty}</p>
-                    <p style="margin-top:4px; font-size:13px; color:#002b73;"><b>Quantidade do Pedido (2x Mínimo):</b> ${minQty * 2} un.</p>
-                    <span class="reason" style="background:${isZero ? '#ffd2d2':'#ffeeb3'}; color:${isZero ? '#d91c1c':'#b78a00'}; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: bold; display: inline-block; margin-top: 5px;">
-                        ${isZero ? '❌ ESTOQUE ZERADO' : '⚠️ ESTOQUE CRÍTICO'}
-                    </span>
-                </div>
-                <button class="btn-order" onclick="triggerSemiAutoPurchase(${item.id})">✉️ Comprar</button>
-            `;
-            cartFragment.appendChild(cartCard);
+                const cartCard = document.createElement("div");
+                cartCard.className = `cart-card ${!isZero ? 'low-stock' : ''}`;
+                cartCard.innerHTML = `
+                    <div class="cart-info">
+                        <h4>${item.name}</h4>
+                        <p><b>Modelo:</b> ${item.model || '---'} | <b>Fornecedor:</b> ${item.supplier || 'Não Definido'}</p>
+                        <p><b>Qtd Atual:</b> <span style="color:#e4001b; font-weight:bold">${currentQty}</span> | Mínimo: ${minQty}</p>
+                        <p style="margin-top:4px; font-size:13px; color:#002b73;"><b>Quantidade do Pedido (2x Mínimo):</b> ${minQty * 2} un.</p>
+                        <span class="reason" style="background:${isZero ? '#ffd2d2':'#ffeeb3'}; color:${isZero ? '#d91c1c':'#b78a00'}; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: bold; display: inline-block; margin-top: 5px;">
+                            ${isZero ? '❌ ESTOQUE ZERADO' : '⚠️ ESTOQUE CRÍTICO'}
+                        </span>
+                    </div>
+                    <button class="btn-order" onclick="triggerSemiAutoPurchase(${item.id})">✉️ Comprar</button>
+                `;
+                cartFragment.appendChild(cartCard);
+            }
         }
     }
-    if (cartContainer) cartContainer.appendChild(cartFragment);
-    document.getElementById("cartBadge").innerText = criticalCartCount;
-    document.getElementById("totalQty").innerText = totalQty;
     
-    if(document.getElementById("countOk")) document.getElementById("countOk").innerText = okCount;
-    if(document.getElementById("countLow")) document.getElementById("countLow").innerText = lowCount;
-    if(document.getElementById("countZero")) document.getElementById("countZero").innerText = zeroCount;
+    if (currentActiveTab === 'cart' && cartContainer) {
+        cartContainer.innerHTML = "";
+        cartContainer.appendChild(cartFragment);
+    }
+    
+    const cartBadge = document.getElementById("cartBadge");
+    const tQty = document.getElementById("totalQty");
+    const cOk = document.getElementById("countOk");
+    const cLow = document.getElementById("countLow");
+    const cZero = document.getElementById("countZero");
+
+    if (cartBadge) cartBadge.innerText = criticalCartCount;
+    if (tQty) tQty.innerText = totalQty;
+    if (cOk) cOk.innerText = okCount;
+    if (cLow) cLow.innerText = lowCount;
+    if (cZero) cZero.innerText = zeroCount;
 }
 
 function applyFilterAndSort() {
-    const search = document.getElementById("search").value.toLowerCase();    
-    const sort = document.getElementById("sort").value;    
-    const filter = document.getElementById("filter").value;
+    const searchEl = document.getElementById("search");
+    const sortEl = document.getElementById("sort");
+    const filterEl = document.getElementById("filter");
+    
+    const search = searchEl ? searchEl.value.toLowerCase() : "";    
+    const sort = sortEl ? sortEl.value : "nameAsc";    
+    const filter = filterEl ? filterEl.value : "all";
 
     filteredList = items.filter(item => {
         if (!item) return false;
@@ -554,15 +522,18 @@ function applyFilterAndSort() {
     else if (sort === "qtyAsc") filteredList.sort((a, b) => a.qty - b.qty);
     else if (sort === "qtyDesc") filteredList.sort((a, b) => b.qty - a.qty);
 
-    document.getElementById("totalItems").innerText = filteredList.length;
+    const totalItemsEl = document.getElementById("totalItems");
+    if (totalItemsEl) totalItemsEl.innerText = filteredList.length;
     
     itemsDisplayedCount = 0;
     const container = document.getElementById("container");
     if(container) container.innerHTML = "";
     
-    requestAnimationFrame(() => {
-        loadMoreItems();
-    });
+    if (currentActiveTab === 'dashboard') {
+        requestAnimationFrame(() => {
+            loadMoreItems();
+        });
+    }
 }
 
 function loadMoreItems() {
@@ -616,13 +587,54 @@ function loadMoreItems() {
     itemsDisplayedCount = nextBatchLimit;
 }
 
+function loadMoreHistory() {
+    if (historyDisplayedCount >= historyList.length) return;
+    const container = document.getElementById("historyContainer");
+    if (!container) return;
+
+    const fragment = document.createDocumentFragment();
+    const nextBatchLimit = Math.min(historyDisplayedCount + ITEMS_PER_PAGE, historyList.length);
+
+    for (let i = historyDisplayedCount; i < nextBatchLimit; i++) {
+        const log = historyList[i];
+        const tr = document.createElement("tr");
+        let badgeStyle = "background:#00b140;"; 
+        if(log.type.includes("Saída") || log.type.includes("Exclusão")) badgeStyle = "background:#d91c1c;"; 
+        if(log.type.includes("Ajuste") || log.type.includes("Criado")) badgeStyle = "background:#0f4fb8;"; 
+
+        const displayModel = log.itemModel || "---";
+
+        tr.innerHTML = `
+            <td>${log.timestamp}</td>
+            <td>
+                <b>${log.itemName}</b> 
+                <span style="color:#666; font-size:11px;">(ID: ${log.itemId})</span>
+                <br>
+                <small style="color:#335ea8; font-size:12px;">Mod: ${displayModel}</small>
+            </td>
+            <td><span class="badge-history" style="${badgeStyle}">${log.type}</span></td>
+            <td>${log.delta} un.</td>
+            <td><b>${log.finalQty} un.</b></td>
+        `;
+        fragment.appendChild(tr);
+    }
+
+    if (historyDisplayedCount === 0) container.innerHTML = "";
+    container.appendChild(fragment);
+    historyDisplayedCount = nextBatchLimit;
+}
+
 window.addEventListener("scroll", () => {
     if (scrollTimeout) return;
     
     scrollTimeout = setTimeout(() => {
         scrollTimeout = null;
         if ((window.innerHeight + window.scrollY) >= document.documentElement.scrollHeight - 150) {
-            loadMoreItems();
+            if (currentActiveTab === 'dashboard') {
+                loadMoreItems();
+            } else if (currentActiveTab === 'history') {
+                loadMoreHistory();
+            }
         }
     }, 60);
 });
@@ -735,10 +747,13 @@ function logToHistory(itemId, type, delta, finalQty) {
     const item = find(itemId);
     const itemName = item ? item.name : `Item ${itemId}`;
     const itemModel = item && item.model ? item.model : "---";
-    const timestamp = new Date().toLocaleString("pt-BR");
+    const now = new Date();
+    const timestampStr = now.toLocaleString("pt-BR");
+    const numericTimestamp = now.getTime();
     
     const logData = {
-        timestamp: timestamp,
+        timestamp: timestampStr,
+        numericTimestamp: numericTimestamp,
         itemId: itemId,
         itemName: itemName,
         itemModel: itemModel,
@@ -747,46 +762,34 @@ function logToHistory(itemId, type, delta, finalQty) {
         finalQty: finalQty
     };
     
-    window.fb.push(window.fb.ref(window.fb.db, 'historico/'), logData);
+    window.fb.push(window.fb.ref(window.fb.db, 'historico/'), logData).then(() => {
+        cleanOldHistory();
+    });
 }
 
-function renderHistory(data) {
-    const container = document.getElementById("historyContainer");
-    if (!container) return;
-    if (!data) {
-        container.innerHTML = `<tr><td colspan="5" style="text-align:center;">Nenhum histórico registrado.</td></tr>`;
-        return;
-    }
+function cleanOldHistory() {
+    const fourteenDaysAgo = Date.now() - (14 * 24 * 60 * 60 * 1000);
+    const historyRef = window.fb.ref(window.fb.db, 'historico/');
     
-    const rawList = Object.values(data);
-    rawList.reverse(); 
-    
-    const fragment = document.createDocumentFragment();
-    rawList.forEach(log => {
-        const tr = document.createElement("tr");
-        let badgeStyle = "background:#00b140;"; 
-        if(log.type.includes("Saída")) badgeStyle = "background:#d91c1c;"; 
-        if(log.type.includes("Ajuste")) badgeStyle = "background:#0f4fb8;"; 
-
-        const displayModel = log.itemModel || "---";
-
-        tr.innerHTML = `
-            <td>${log.timestamp}</td>
-            <td>
-                <b>${log.itemName}</b> 
-                <span style="color:#666; font-size:11px;">(ID: ${log.itemId})</span>
-                <br>
-                <small style="color:#335ea8; font-size:12px;">Mod: ${displayModel}</small>
-            </td>
-            <td><span class="badge-history" style="${badgeStyle}">${log.type}</span></td>
-            <td>${log.delta} un.</td>
-            <td><b>${log.finalQty} un.</b></td>
-        `;
-        fragment.appendChild(tr);
-    });
-    
-    container.innerHTML = "";
-    container.appendChild(fragment);
+    window.fb.onValue(window.fb.query(historyRef, window.fb.orderByKey()), (snapshot) => {
+        const data = snapshot.val();
+        if (!data) return;
+        
+        let updates = {};
+        let needDelete = false;
+        
+        Object.keys(data).forEach(key => {
+            const log = data[key];
+            if (log.numericTimestamp && log.numericTimestamp < fourteenDaysAgo) {
+                updates[key] = null;
+                needDelete = true;
+            }
+        });
+        
+        if (needDelete) {
+            window.fb.update(historyRef, updates);
+        }
+    }, { onlyOnce: true });
 }
 
 function openItemModal() {
@@ -816,7 +819,6 @@ function openRenameModal(id) {
     document.getElementById("itemModal").style.display = "flex";
 }
 
-document.getElementById("itemModal").addEventListener("click", function(e) { if(e.target === this) closeItemModal(); });
 function closeItemModal() { document.getElementById("itemModal").style.display = "none"; }
 
 function saveModalItem() {
@@ -855,13 +857,106 @@ function deleteItem(id){
     });
 }
 
-document.getElementById("search").addEventListener("input", applyFilterAndSort);
-document.getElementById("sort").addEventListener("change", applyFilterAndSort);
-document.getElementById("filter").addEventListener("change", applyFilterAndSort);
-document.getElementById("searchCart").addEventListener("input", preCalculatedTotalsAndCart);
+function updateData(newItemsArray) {
+    items = newItemsArray;
+    preCalculatedTotalsAndCart();
+    if (currentActiveTab === 'dashboard') {
+        applyFilterAndSort();
+    }
+}
+
+function seedDatabase() {
+    if(!confirm("Banco de dados vazio! Deseja gerar os 2.500 itens estruturais?")) return;
+    isSeeding = true;
+    const TOTAL_ITEMS = 2500;
+    const BATCH_SIZE = 500;
+    let currentId = 1;
+
+    function sendNextBatch() {
+        if (currentId > TOTAL_ITEMS) {
+            isSeeding = false;
+            init(); 
+            return;
+        }
+        let batch = {};
+        let limit = Math.min(currentId + BATCH_SIZE - 1, TOTAL_ITEMS);
+        for (let i = currentId; i <= limit; i++) {
+            batch[i] = { id: i, name: `Item ${i}`, brand: "", model: "", supplier: "", contact: "", location: "", minQty: 0, qty: 0 };
+        }
+        window.fb.update(window.fb.ref(window.fb.db, 'estoque/'), batch).then(() => {
+            currentId += BATCH_SIZE;
+            setTimeout(sendNextBatch, 400);
+        });
+    }
+    sendNextBatch();
+}
+
+function init() {
+    if (initialized) return;
+    initialized = true;
+    
+    window.fb.onValue(window.fb.ref(window.fb.db, 'estoque/'), (snapshot) => {
+        if (isSeeding) return; 
+        const data = snapshot.val();
+        if (!data) { items = []; seedDatabase(); } 
+        else { items = Object.values(data); }
+        updateData(items);
+    });
+
+    window.fb.onValue(window.fb.ref(window.fb.db, 'config/'), (snapshot) => {
+        const data = snapshot.val();
+        configs = data || {};
+        
+        if(!configs.buyerEmail) configs.buyerEmail = "almoxarifado.bimbo@gmail.com";
+        if(!configs.template) configs.template = "[LOGOTIPO: bimbo-logo.png]\n\nPrezado {fornecedor},\n\nIdentificamos que o item [{item} - {modelo}] atingiu o nível crítico em nosso estoque.\nSolicitamos o fornecimento de orçamento para a reposição urgente de {dobro_minimo} unidades.\n\nAtenciosamente,\nAlmoxarifado Grupo Bimbo Brasil.";
+        if(!configs.whatsappTemplate) configs.whatsappTemplate = "*Aviso de Compra - Almoxarifado Bimbo*\n\nOlá {fornecedor}, precisamos formalizar uma solicitação urgente de cotação para o item:\n📦 *{item}*\n🔹 *Modelo:* {modelo}\n📉 *Estoque Atual:* {quantidade} unidades\n🛒 *Quantidade do Pedido (2x Mínimo):* {dobro_minimo} unidades.\n\nPor favor, nos envie a proposta comercial o quanto antes. Obrigado!";
+        
+        const cEmail = document.getElementById("cfgBuyerEmail");
+        const cTemplate = document.getElementById("cfgEmailTemplate");
+        const cWha = document.getElementById("cfgWhatsappTemplate");
+
+        if(cEmail) cEmail.value = configs.buyerEmail;
+        if(cTemplate) cTemplate.value = configs.template;
+        if(cWha) cWha.value = configs.whatsappTemplate;
+    });
+
+    const historyRef = window.fb.ref(window.fb.db, 'historico/');
+    const optimizedHistoryQuery = window.fb.query(historyRef, window.fb.orderByKey(), window.fb.limitToLast(500));
+
+    window.fb.onValue(optimizedHistoryQuery, (snapshot) => {
+        const data = snapshot.val();
+        if (!data) {
+            historyList = [];
+        } else {
+            historyList = Object.values(data);
+            historyList.reverse();
+        }
+        
+        if (currentActiveTab === 'history') {
+            historyDisplayedCount = 0;
+            loadMoreHistory();
+        }
+    });
+
+    const modalOverlay = document.getElementById("itemModal");
+    if (modalOverlay) {
+        modalOverlay.addEventListener("click", function(e) { if(e.target === this) closeItemModal(); });
+    }
+
+    const sEl = document.getElementById("search");
+    const soEl = document.getElementById("sort");
+    const fEl = document.getElementById("filter");
+    const sCartEl = document.getElementById("searchCart");
+
+    if(sEl) sEl.addEventListener("input", applyFilterAndSort);
+    if(soEl) soEl.addEventListener("change", applyFilterAndSort);
+    if(fEl) fEl.addEventListener("change", applyFilterAndSort);
+    if(sCartEl) sCartEl.addEventListener("input", preCalculatedTotalsAndCart);
+}
 
 document.addEventListener("keydown",(e)=>{    
-    if(e.key === "Enter" && document.getElementById("loginScreen").style.display !== "none") checkPassword();
+    const loginScreen = document.getElementById("loginScreen");
+    if(e.key === "Enter" && loginScreen && loginScreen.style.display !== "none") checkPassword();
 });
 </script>
 </body>
