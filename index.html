@@ -208,7 +208,7 @@
         
         <div class="sticky-controls-wrapper">
             <div class="top-bar">
-                <input type="text" id="search" placeholder="Pesquisar por especificação, modelo, marca ou fornecedor...">
+                <input type="text" id="search" placeholder="Pesquisar por especificação, modelo, marca, fornecedor ou locação...">
                 <select id="sort">
                     <option value="nameAsc">Nome A-Z</option>
                     <option value="nameDesc">Nome Z-A</option>
@@ -497,7 +497,8 @@ function applyFilterAndSort() {
             item.name.toLowerCase().includes(search) || 
             (item.brand && item.brand.toLowerCase().includes(search)) || 
             (item.model && item.model.toLowerCase().includes(search)) ||
-            (item.supplier && item.supplier.toLowerCase().includes(search));
+            (item.supplier && item.supplier.toLowerCase().includes(search)) ||
+            (item.location && item.location.toLowerCase().includes(search));
         if (!matchesSearch) return false;
 
         const minQty = item.minQty || 0;
