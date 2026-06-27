@@ -21,7 +21,16 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
+        
+        // Exporta para o escopo global com segurança
         window.fb = { db, ref, set, update, remove, onValue };
+
+        // Inicializa o sistema após o Firebase estar pronto
+        if (sessionStorage.getItem("bimboLogged") === "true") {
+            const loginScreen = document.getElementById("loginScreen");
+            if (loginScreen) loginScreen.style.display = "none";
+            init();
+        }
     </script>
 
     <style>
@@ -282,8 +291,6 @@
 </div>
 
 <script>
-const ACCESS_PASSWORD = "Almoxarifado@Bimbo2026";
-
 let items = [];
 let configs = {};
 let initialized = false;
@@ -295,10 +302,10 @@ const ITEMS_PER_PAGE = 30;
 
 function checkPassword(){
     const input = document.getElementById("passwordInput").value;
-    if(input === ACCESS_PASSWORD){
+    if(input === "Almoxarifado@Bimbo2026"){
         sessionStorage.setItem("bimboLogged","true");
         document.getElementById("loginScreen").style.display = "none";
-        if(!initialized){ init(); initialized = true; }
+        if(!initialized){ init(); }
     } else { document.getElementById("errorMsg").innerText = "Senha incorreta"; }
 }
 
@@ -318,7 +325,7 @@ function updateData(newItemsArray) {
 }
 
 function seedDatabase() {
-    if(!confirm("Banco de dados vazio! Deseja gerar automaticamente os 2.500 itens iniciais (Processado em lotes estáveis)?")) return;
+    if(!confirm("Banco de dados vazio! Deseja gerar automaticamente os 2.500 itens iniciais?")) return;
     
     isSeeding = true;
     alert("Iniciando injeção estruturada de dados. Aguarde a confirmação de conclusão...");
@@ -331,6 +338,7 @@ function seedDatabase() {
         if (currentId > TOTAL_ITEMS) {
             alert("Sucesso! Todos os 2.500 itens foram injetados corretamente.");
             isSeeding = false;
+            init(); // Força a re-inicialização após semear
             return;
         }
 
@@ -366,6 +374,7 @@ function seedDatabase() {
 }
 
 function init() {
+    if (initialized) return;
     initialized = true;
     
     window.fb.onValue(window.fb.ref(window.fb.db, 'estoque/'), (snapshot) => {
@@ -416,7 +425,7 @@ function saveSettings() {
 function preCalculatedTotalsAndCart() {
     let okCount = 0, lowCount = 0, zeroCount = 0, totalQty = 0, criticalCartCount = 0;
     const cartContainer = document.getElementById("cartContainer");
-    cartContainer.innerHTML = "";
+    if (cartContainer) cartContainer.innerHTML = "";
     const cartFragment = document.createDocumentFragment();
 
     const cartSearchInput = document.getElementById("searchCart");
@@ -466,7 +475,7 @@ function preCalculatedTotalsAndCart() {
         }
     }
 
-    cartContainer.appendChild(cartFragment);
+    if (cartContainer) cartContainer.appendChild(cartFragment);
     document.getElementById("cartBadge").innerText = criticalCartCount;
     document.getElementById("totalQty").innerText = totalQty;
     
@@ -496,7 +505,6 @@ function applyFilterAndSort() {
 
         if (filter === "statusZero") return qty === 0;
         if (filter === "statusLow") return minQty > 0 && qty > 0 && qty < minQty;
-        // Correção definitiva da regra de OK: se a qty for maior/igual ao minQty OU se não houver mínimo cadastrado e o estoque não estiver zerado
         if (filter === "statusOk") return (minQty > 0 && qty >= minQty) || (minQty === 0 && qty > 0); 
         if (filter === "positive") return qty > 0;
         
@@ -513,14 +521,11 @@ function applyFilterAndSort() {
         filteredList.sort((a, b) => {
             const locA = (a.location || "").trim();
             const locB = (b.location || "").trim();
-            
             const isEmptyA = !locA || locA === "---";
             const isEmptyB = !locB || locB === "---";
-            
             if (isEmptyA && !isEmptyB) return 1;
             if (!isEmptyA && isEmptyB) return -1;
             if (isEmptyA && isEmptyB) return 0;
-            
             return locA.localeCompare(locB, undefined, { numeric: true, sensitivity: 'base' });
         });
     }
@@ -587,7 +592,7 @@ function loadMoreItems() {
         fragment.appendChild(card);
     }
 
-    container.appendChild(fragment);
+    if (container) container.appendChild(fragment);
     itemsDisplayedCount = nextBatchLimit;
 }
 
@@ -717,11 +722,6 @@ document.querySelector(".main-content").addEventListener("click", () => {
         document.getElementById("appSidebar").classList.remove("expanded");
     }
 });
-
-if(sessionStorage.getItem("bimboLogged")){    
-    document.getElementById("loginScreen").style.display = "none";    
-    if(!initialized){ init(); initialized = true; }
-}
 </script>
 </body>
 </html>
