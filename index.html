@@ -565,12 +565,12 @@ function loadMoreItems() {
                 <span class="gear" onclick="openRenameModal(${item.id})">⚙️</span>            
             </div>
             <div class="item-details">
-                <p><span>Marca:</span> <span class="card-text-value">${item.brand || '---'}</span></p>
-                <p><span>Modelo:</span> <span class="card-text-value">${item.model || '---'}</span></p>
-                <p><span>Fornecedor:</span> <span class="card-text-value">${item.supplier || '---'}</span></p>
-                <p><span>Contato:</span> <span class="card-text-value">${item.contact || '---'}</span></p>
-                <p><span>Locação:</span> <span class="card-text-value">${item.location || '---'}</span></p>
-                <p><span>Estoque Mín:</span> <span class="card-text-value">${minQty}</span></p>
+                <p><span>Marca:</span> <span class="card-text-value brand-val">${item.brand || '---'}</span></p>
+                <p><span>Modelo:</span> <span class="card-text-value model-val">${item.model || '---'}</span></p>
+                <p><span>Fornecedor:</span> <span class="card-text-value supplier-val">${item.supplier || '---'}</span></p>
+                <p><span>Contato:</span> <span class="card-text-value contact-val">${item.contact || '---'}</span></p>
+                <p><span>Locação:</span> <span class="card-text-value location-val">${item.location || '---'}</span></p>
+                <p><span>Estoque Mín:</span> <span class="card-text-value min-qty-val">${minQty}</span></p>
             </div>
             <div class="counter">                
                 <button onclick="changeQty(${item.id},-1)">−</button>                
@@ -705,11 +705,27 @@ function updateSingleCardUI(id) {
     const item = find(id);
     if (!item) return;
 
-    const label = document.getElementById(`qty-val-${id}`);
-    if (label) label.innerText = item.qty;
-
     const card = document.getElementById(`card-item-${id}`);
     if (card) {
+        // Atualiza os textos cadastrais caso tenham mudado
+        const nameEl = card.querySelector('.item-name');
+        const brandEl = card.querySelector('.brand-val');
+        const modelEl = card.querySelector('.model-val');
+        const supplierEl = card.querySelector('.supplier-val');
+        const contactEl = card.querySelector('.contact-val');
+        const locationEl = card.querySelector('.location-val');
+        const minQtyEl = card.querySelector('.min-qty-val');
+        const label = document.getElementById(`qty-val-${id}`);
+
+        if (nameEl) nameEl.innerText = item.name || '';
+        if (brandEl) brandEl.innerText = item.brand || '---';
+        if (modelEl) modelEl.innerText = item.model || '---';
+        if (supplierEl) supplierEl.innerText = item.supplier || '---';
+        if (contactEl) contactEl.innerText = item.contact || '---';
+        if (locationEl) locationEl.innerText = item.location || '---';
+        if (minQtyEl) minQtyEl.innerText = item.minQty || 0;
+        if (label) label.innerText = item.qty;
+
         const statusEl = card.querySelector('.status-badge-el');
         if (statusEl) {
             const minQty = item.minQty || 0;
@@ -883,8 +899,23 @@ function saveModalItem() {
 function deleteItem(id){    
     const item = find(id); if(!item) return;
     if(!confirm(`Excluir "${item.name}" ?`)) return;    
+    
+    const nameBackup = item.name;
+    const modelBackup = item.model || "---";
+
     window.fb.remove(window.fb.ref(window.fb.db, 'estoque/' + id)).then(() => {
-        logToHistory(id, "Ajuste (Exclusão)", 0, 0);
+        const now = new Date();
+        const logData = {
+            timestamp: now.toLocaleString("pt-BR"),
+            numericTimestamp: now.getTime(),
+            itemId: id,
+            itemName: nameBackup,
+            itemModel: modelBackup,
+            type: "Ajuste (Exclusão)",
+            delta: 0,
+            finalQty: 0
+        };
+        window.fb.push(window.fb.ref(window.fb.db, 'historico/'), logData);
     });
 }
 
