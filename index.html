@@ -22,10 +22,8 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
         
-        // Exporta para o escopo global com segurança
         window.fb = { db, ref, set, update, remove, onValue };
 
-        // Inicializa o sistema após o Firebase estar pronto
         if (sessionStorage.getItem("bimboLogged") === "true") {
             const loginScreen = document.getElementById("loginScreen");
             if (loginScreen) loginScreen.style.display = "none";
@@ -72,7 +70,6 @@
         .title-container h1 { color: #002b73; font-size: 30px; margin: 0; }
         .title-container h2 { font-size: 14px; color: #3b5ea8; margin-top: 4px; font-weight: normal; }
         
-        /* BARRAS DE PESQUISA E RESUMO FIXAS (STICKY) */
         .sticky-controls-wrapper { position: sticky; top: 0; z-index: 1000; background: #e9eef7; padding-top: 5px; padding-bottom: 15px; }
         
         .top-bar { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; }
@@ -99,7 +96,6 @@
         .item-details span { font-weight: bold; color: #7fb2ff; min-width: 85px; }
         .card-text-value { color: white; font-size: 13px; text-align: right; word-break: break-all; padding-left: 10px; display: inline-block; }
         
-        /* CONTADORES */
         .counter { display: flex; justify-content: center; align-items: center; gap: 15px; margin-bottom: 10px; }
         .counter button { width: 46px; height: 46px; font-size: 24px; font-weight: bold; color: white; border: none; border-radius: 12px; cursor: pointer; }
         .counter button:first-child { background: #d91c1c; }
@@ -120,16 +116,15 @@
         .cart-card.low-stock { border-left-color: #ffcc00; }
         .cart-info h4 { font-size: 18px; color: #002b73; margin-bottom: 5px; }
         .cart-info p { font-size: 14px; color: #555; }
-        .cart-info span.reason { font-weight: bold; padding: 2px 6px; border-radius: 4px; font-size: 12px; }
         .btn-order { background: #00b140; color: white; border: none; padding: 12px 24px; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 15px; display: flex; align-items: center; gap: 8px; transition: background 0.2s; }
         .btn-order:hover { background: #008f33; }
 
         /* ================= CONFIGURAÇÕES ================= */
-        .config-box { background: white; padding: 25px; border-radius: 18px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); max-width: 650px; }
+        .config-box { background: white; padding: 25px; border-radius: 18px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); max-width: 750px; }
         .config-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 18px; }
         .config-group label { font-weight: bold; color: #002b73; font-size: 15px; }
         .config-group input, .config-group textarea { padding: 12px; border: 2px solid #ccc; border-radius: 10px; font-size: 15px; outline: none; }
-        .config-group textarea { height: 120px; resize: vertical; font-family: monospace; }
+        .config-group textarea { height: 160px; resize: vertical; font-family: monospace; line-height: 1.4; }
         .btn-config-save { background: #002b73; color: white; padding: 12px 25px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; }
 
         /* ================= MODAL CUSTOMIZADO ================= */
@@ -144,7 +139,6 @@
         .btn-save { background: #00b140; }
         .btn-cancel { background: #d91c1c; }
 
-        /* ================= ADAPTAÇÕES CELULAR ================= */
         @media(max-width:768px) {
             .main-content { padding: 15px; }
             .title-container h1 { font-size: 23px; }
@@ -241,7 +235,7 @@
         </div>
         <div class="sticky-controls-wrapper">
             <div class="top-bar">
-                <input type="text" id="searchCart" placeholder="Pesquisar itens no carrinho (Nome, Marca, Modelo ou Fornecedor)...">
+                <input type="text" id="searchCart" placeholder="Pesquisar itens no carrinho...">
             </div>
         </div>
         <div class="cart-grid" id="cartContainer"></div>
@@ -256,8 +250,8 @@
         </div>
         <div class="config-box">
             <div class="config-group">
-                <label>E-mails para Cópia Oculta (Cco) - <i>Separe múltiplos e-mails por vírgula</i></label>
-                <input type="text" id="cfgBuyerEmail" placeholder="compras.manutencao@bimbo.com, almoxarife@bimbo.com">
+                <label>E-mails para Cópia Oculta (Cco)</label>
+                <input type="text" id="cfgBuyerEmail" placeholder="compras@bimbo.com">
             </div>
             <div class="config-group">
                 <label>Template da Mensagem de Compra (E-mail)</label>
@@ -265,9 +259,9 @@
             </div>
             <div class="config-group">
                 <label>Template da Mensagem de Compra (WhatsApp)</label>
-                <textarea id="cfgWhatsappTemplate" placeholder="Insira o texto para envio via WhatsApp..."></textarea>
-                <small style="color:#666; margin-top:5px;">
-                    Use as tags chaves: <b>{fornecedor}</b>, <b>{item}</b>, <b>{modelo}</b>, <b>{quantidade}</b>
+                <textarea id="cfgWhatsappTemplate"></textarea>
+                <small style="color:#002b73; margin-top:5px; font-size:12px;">
+                    Chaves disponíveis: <b>{fornecedor}</b>, <b>{item}</b>, <b>{modelo}</b>, <b>{quantidade}</b>, <b>{dobro_minimo}</b> (Quantidade sugerida equivalente a 2x o estoque mínimo).
                 </small>
             </div>
             <button class="btn-config-save" onclick="saveSettings()">Salvar Configurações</button>
@@ -279,12 +273,12 @@
     <div class="modal-box">
         <h3 id="modalTitle">Novo Item</h3>
         <input type="hidden" id="modalItemId">
-        <div class="modal-group"><label>Nome do Item</label><input type="text" id="modalName" placeholder="Ex: Rolamento"></div>
+        <div class="modal-group"><label>Nome do Item</label><input type="text" id="modalName"></div>
         <div id="additionalModalFields">
             <div class="modal-group"><label>Marca</label><input type="text" id="modalBrand"></div>
             <div class="modal-group"><label>Modelo</label><input type="text" id="modalModel"></div>
             <div class="modal-group"><label>Fornecedor</label><input type="text" id="modalSupplier"></div>
-            <div class="modal-group"><label>Contato (E-mail ou Telefone com DDD)</label><input type="text" id="modalContact" placeholder="vendas@fornecedor.com ou 11999998888"></div>
+            <div class="modal-group"><label>Contato (E-mail ou WhatsApp)</label><input type="text" id="modalContact"></div>
             <div class="modal-group"><label>Locação</label><input type="text" id="modalLocation"></div>
             <div class="modal-group"><label>Estoque Mínimo</label><input type="number" id="modalMinQty" min="0"></div>
         </div>
@@ -300,7 +294,6 @@ let items = [];
 let configs = {};
 let initialized = false;
 let isSeeding = false; 
-
 let filteredList = [];
 let itemsDisplayedCount = 0;
 const ITEMS_PER_PAGE = 30; 
@@ -329,53 +322,29 @@ function updateData(newItemsArray) {
     applyFilterAndSort();
 }
 
-// Semeia base vazia
 function seedDatabase() {
-    if(!confirm("Banco de dados vazio! Deseja gerar automaticamente os 2.500 itens iniciais?")) return;
-    
+    if(!confirm("Banco de dados vazio! Deseja gerar os 2.500 itens estruturais?")) return;
     isSeeding = true;
-    alert("Iniciando injeção estruturada de dados. Aguarde a confirmação de conclusão...");
-    
     const TOTAL_ITEMS = 2500;
     const BATCH_SIZE = 500;
     let currentId = 1;
 
     function sendNextBatch() {
         if (currentId > TOTAL_ITEMS) {
-            alert("Sucesso! Todos os 2.500 itens foram injetados corretamente.");
             isSeeding = false;
             init(); 
             return;
         }
-
         let batch = {};
         let limit = Math.min(currentId + BATCH_SIZE - 1, TOTAL_ITEMS);
-
         for (let i = currentId; i <= limit; i++) {
-            batch[i] = {
-                id: i,
-                name: `Item ${i}`,
-                brand: "",
-                model: "",
-                supplier: "",
-                contact: "",
-                location: "",
-                minQty: 0,
-                qty: 0
-            };
+            batch[i] = { id: i, name: `Item ${i}`, brand: "", model: "", supplier: "", contact: "", location: "", minQty: 0, qty: 0 };
         }
-
-        window.fb.update(window.fb.ref(window.fb.db, 'estoque/'), batch)
-            .then(() => {
-                currentId += BATCH_SIZE;
-                setTimeout(sendNextBatch, 600);
-            })
-            .catch(err => {
-                alert("Erro ao semear banco de dados: " + err.message);
-                isSeeding = false;
-            });
+        window.fb.update(window.fb.ref(window.fb.db, 'estoque/'), batch).then(() => {
+            currentId += BATCH_SIZE;
+            setTimeout(sendNextBatch, 400);
+        });
     }
-
     sendNextBatch();
 }
 
@@ -386,12 +355,8 @@ function init() {
     window.fb.onValue(window.fb.ref(window.fb.db, 'estoque/'), (snapshot) => {
         if (isSeeding) return; 
         const data = snapshot.val();
-        if (!data) {
-            items = [];
-            seedDatabase();
-        } else {
-            items = Object.values(data);
-        }
+        if (!data) { items = []; seedDatabase(); } 
+        else { items = Object.values(data); }
         updateData(items);
     });
 
@@ -400,8 +365,10 @@ function init() {
         configs = data || {};
         
         if(!configs.buyerEmail) configs.buyerEmail = "almoxarifado.bimbo@gmail.com";
-        if(!configs.template) configs.template = "Prezado {fornecedor},\n\nIdentificamos que o item [{item} - {modelo}] atingiu o nível crítico em nosso estoque.\nSolicitamos o fornecimento de cotação/envio para reposição urgente.\n\nAtenciosamente,\nAlmoxarifado Bimbo.";
-        if(!configs.whatsappTemplate) configs.whatsappTemplate = "*Aviso de Almoxarifado - Bimbo*\n\nOlá {fornecedor}, precisamos de uma cotação/reposição urgente para o item:\n📦 *{item}* (Modelo: {modelo})\n📉 *Qtd Atual:* {quantidade} unidades.\n\nNo aguardo, obrigado!";
+        
+        // CORREÇÃO: Inclusão explícita da chave {dobro_minimo} e do logo bimbo-logo.png diretamente na mensagem padrão das configurações
+        if(!configs.template) configs.template = "[LOGOTIPO: bimbo-logo.png]\n\nPrezado {fornecedor},\n\nIdentificamos que o item [{item} - {modelo}] atingiu o nível crítico em nosso estoque.\nSolicitamos o fornecimento de orçamento para a reposição urgente de {dobro_minimo} unidades (Quantidade correspondente a 2x o estoque mínimo do item).\n\nAtenciosamente,\nAlmoxarifado Grupo Bimbo Brasil.";
+        if(!configs.whatsappTemplate) configs.whatsappTemplate = "*Aviso de Compra - Almoxarifado Bimbo*\n\nOlá {fornecedor}, precisamos formalizar uma solicitação urgente de cotação para o item:\n📦 *{item}*\n🔹 *Modelo:* {modelo}\n📉 *Estoque Atual:* {quantidade} unidades\n🛒 *Quantidade do Pedido (2x Mínimo):* {dobro_minimo} unidades.\n\nPor favor, nos envie a proposta comercial o quanto antes. Obrigado!";
         
         document.getElementById("cfgBuyerEmail").value = configs.buyerEmail;
         document.getElementById("cfgEmailTemplate").value = configs.template;
@@ -416,7 +383,6 @@ function switchTab(tabId, btn) {
     document.querySelectorAll('.menu-btn').forEach(b => b.classList.remove('active'));
     document.getElementById(`section-${tabId}`).classList.add('active');
     btn.classList.add('active');
-    
     document.getElementById("appSidebar").classList.remove("expanded");
     window.scrollTo({top: 0});
 }
@@ -427,8 +393,8 @@ function saveSettings() {
     configs.whatsappTemplate = document.getElementById("cfgWhatsappTemplate").value;
     
     window.fb.set(window.fb.ref(window.fb.db, 'config/'), configs)
-        .then(() => alert("Configurações salvas no Firebase!"))
-        .catch(err => alert("Erro ao salvar configurações: " + err.message));
+        .then(() => alert("Configurações salvas com sucesso!"))
+        .catch(err => alert("Erro ao salvar: " + err.message));
 }
 
 function preCalculatedTotalsAndCart() {
@@ -436,9 +402,7 @@ function preCalculatedTotalsAndCart() {
     const cartContainer = document.getElementById("cartContainer");
     if (cartContainer) cartContainer.innerHTML = "";
     const cartFragment = document.createDocumentFragment();
-
-    const cartSearchInput = document.getElementById("searchCart");
-    const cartSearch = cartSearchInput ? cartSearchInput.value.toLowerCase() : "";
+    const cartSearch = document.getElementById("searchCart") ? document.getElementById("searchCart").value.toLowerCase() : "";
 
     for(let i=0; i<items.length; i++) {
         const item = items[i];
@@ -447,17 +411,12 @@ function preCalculatedTotalsAndCart() {
         const currentQty = item.qty || 0;
         totalQty += currentQty;
 
-        if (currentQty === 0) {
-            zeroCount++;
-        } else if (minQty > 0 && currentQty < minQty) {
-            lowCount++;
-        } else {
-            okCount++;
-        }
+        if (currentQty === 0) zeroCount++;
+        else if (minQty > 0 && currentQty < minQty) lowCount++;
+        else okCount++;
 
         if (minQty > 0 && currentQty < minQty) {
             criticalCartCount++;
-
             const matchesCartSearch = !cartSearch || 
                 item.name.toLowerCase().includes(cartSearch) || 
                 (item.brand && item.brand.toLowerCase().includes(cartSearch)) || 
@@ -465,7 +424,6 @@ function preCalculatedTotalsAndCart() {
                 (item.supplier && item.supplier.toLowerCase().includes(cartSearch));
 
             if (!matchesCartSearch) continue;
-
             const isZero = currentQty === 0;
 
             const cartCard = document.createElement("div");
@@ -474,24 +432,24 @@ function preCalculatedTotalsAndCart() {
                 <div class="cart-info">
                     <h4>${item.name}</h4>
                     <p><b>Modelo:</b> ${item.model || '---'} | <b>Fornecedor:</b> ${item.supplier || 'Não Definido'}</p>
-                    <p><b>Qtd Atual:</b> <span style="color:#e4001b; font-weight:bold">${currentQty}</span> de um mínimo de ${minQty}</p>
-                    <span class="reason" style="background:${isZero ? '#ffd2d2':'#ffeeb3'}; color:${isZero ? '#d91c1c':'#b78a00'};">
+                    <p><b>Qtd Atual:</b> <span style="color:#e4001b; font-weight:bold">${currentQty}</span> | Mínimo: ${minQty}</p>
+                    <p style="margin-top:4px; font-size:13px; color:#002b73;"><b>Quantidade do Pedido (2x Mínimo):</b> ${minQty * 2} un.</p>
+                    <span class="reason" style="background:${isZero ? '#ffd2d2':'#ffeeb3'}; color:${isZero ? '#d91c1c':'#b78a00'}; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: bold; display: inline-block; margin-top: 5px;">
                         ${isZero ? '❌ ESTOQUE ZERADO' : '⚠️ ESTOQUE CRÍTICO'}
                     </span>
                 </div>
-                <button class="btn-order" onclick="triggerSemiAutoPurchase(${item.id})">Comprar</button>
+                <button class="btn-order" onclick="triggerSemiAutoPurchase(${item.id})">✉️ Comprar</button>
             `;
             cartFragment.appendChild(cartCard);
         }
     }
-
     if (cartContainer) cartContainer.appendChild(cartFragment);
     document.getElementById("cartBadge").innerText = criticalCartCount;
     document.getElementById("totalQty").innerText = totalQty;
     
-    const cOk = document.getElementById("countOk"); if(cOk) cOk.innerText = okCount;
-    const cLow = document.getElementById("countLow"); if(cLow) cLow.innerText = lowCount;
-    const cZero = document.getElementById("countZero"); if(cZero) cZero.innerText = zeroCount;
+    if(document.getElementById("countOk")) document.getElementById("countOk").innerText = okCount;
+    if(document.getElementById("countLow")) document.getElementById("countLow").innerText = lowCount;
+    if(document.getElementById("countZero")) document.getElementById("countZero").innerText = zeroCount;
 }
 
 function applyFilterAndSort() {
@@ -501,13 +459,11 @@ function applyFilterAndSort() {
 
     filteredList = items.filter(item => {
         if (!item) return false;
-        
         const matchesSearch = !search || 
             item.name.toLowerCase().includes(search) || 
             (item.brand && item.brand.toLowerCase().includes(search)) || 
             (item.model && item.model.toLowerCase().includes(search)) ||
             (item.supplier && item.supplier.toLowerCase().includes(search));
-        
         if (!matchesSearch) return false;
 
         const minQty = item.minQty || 0;
@@ -517,34 +473,20 @@ function applyFilterAndSort() {
         if (filter === "statusLow") return minQty > 0 && qty > 0 && qty < minQty;
         if (filter === "statusOk") return (minQty > 0 && qty >= minQty) || (minQty === 0 && qty > 0); 
         if (filter === "positive") return qty > 0;
-        
         return true;
     });
 
-    if (sort === "nameAsc") {
-        filteredList.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
-    }
-    else if (sort === "nameDesc") {
-        filteredList.sort((a, b) => b.name.localeCompare(a.name, undefined, { numeric: true, sensitivity: 'base' }));
-    }
+    if (sort === "nameAsc") filteredList.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+    else if (sort === "nameDesc") filteredList.sort((a, b) => b.name.localeCompare(a.name, undefined, { numeric: true }));
     else if (sort === "locationAsc") {
         filteredList.sort((a, b) => {
-            const locA = (a.location || "").trim();
-            const locB = (b.location || "").trim();
-            const isEmptyA = !locA || locA === "---";
-            const isEmptyB = !locB || locB === "---";
-            if (isEmptyA && !isEmptyB) return 1;
-            if (!isEmptyA && isEmptyB) return -1;
-            if (isEmptyA && isEmptyB) return 0;
-            return locA.localeCompare(locB, undefined, { numeric: true, sensitivity: 'base' });
+            const locA = (a.location || "").trim(); const locB = (b.location || "").trim();
+            if (!locA && locB) return 1; if (locA && !locB) return -1;
+            return locA.localeCompare(locB, undefined, { numeric: true });
         });
     }
-    else if (sort === "qtyAsc") {
-        filteredList.sort((a, b) => a.qty - b.qty);
-    }
-    else if (sort === "qtyDesc") {
-        filteredList.sort((a, b) => b.qty - a.qty);
-    }
+    else if (sort === "qtyAsc") filteredList.sort((a, b) => a.qty - b.qty);
+    else if (sort === "qtyDesc") filteredList.sort((a, b) => b.qty - a.qty);
 
     document.getElementById("totalItems").innerText = filteredList.length;
     document.getElementById("container").innerHTML = "";
@@ -554,7 +496,6 @@ function applyFilterAndSort() {
 
 function loadMoreItems() {
     if (itemsDisplayedCount >= filteredList.length) return;
-
     const container = document.getElementById("container");
     const fragment = document.createDocumentFragment();
     const nextBatchLimit = Math.min(itemsDisplayedCount + ITEMS_PER_PAGE, filteredList.length);
@@ -565,13 +506,9 @@ function loadMoreItems() {
         const qty = item.qty || 0;
         let statusHTML = "";
 
-        if (qty === 0) {
-            statusHTML = `<div class="status-warning" style="color:#ff4d4d;">❌ Estoque Zerado</div>`;
-        } else if (minQty > 0 && qty < minQty) {
-            statusHTML = `<div class="status-warning" style="color:#ffcc00;">⚠️ Abaixo do Mínimo</div>`;
-        } else {
-            statusHTML = `<div class="status-warning" style="color:#00b140;">✔️ Controle OK</div>`;
-        }
+        if (qty === 0) statusHTML = `<div class="status-warning" style="color:#ff4d4d;">❌ Estoque Zerado</div>`;
+        else if (minQty > 0 && qty < minQty) statusHTML = `<div class="status-warning" style="color:#ffcc00;">⚠️ Abaixo do Mínimo</div>`;
+        else statusHTML = `<div class="status-warning" style="color:#00b140;">✔️ Controle OK</div>`;
 
         const card = document.createElement("div");
         card.className = "card";
@@ -601,8 +538,7 @@ function loadMoreItems() {
             </div>`;
         fragment.appendChild(card);
     }
-
-    if (container) container.appendChild(fragment);
+    container.appendChild(fragment);
     itemsDisplayedCount = nextBatchLimit;
 }
 
@@ -615,45 +551,42 @@ window.addEventListener("scroll", () => {
 function triggerSemiAutoPurchase(id) {
     const item = find(id);
     if (!item || !item.contact) {
-        alert("Cadastre o e-mail ou o telefone do fornecedor no campo 'Contato' para gerar a compra!");
+        alert("Preencha o campo 'Contato' do fornecedor para disparar o pedido.");
         return;
     }
 
     const contactStr = item.contact.trim();
+    const minQty = item.minQty || 0;
+    const doubleMinQty = minQty * 2; // Processamento exato das chaves de cálculo
 
-    // Identifica dinamicamente se o campo é um E-mail ou um Telefone
     if (contactStr.includes("@")) {
-        // Envio estruturado por E-mail
-        let bodyText = (configs.template || "")
+        // Renderização dinâmica da chave nas configurações de e-mail substituindo as tags
+        let baseBodyText = (configs.template || "")
             .replace(/{fornecedor}/g, item.supplier || "Fornecedor")
             .replace(/{item}/g, item.name)
             .replace(/{modelo}/g, item.model || "---")
-            .replace(/{quantidade}/g, item.qty);
-            
-        const subject = encodeURIComponent(`[URGENTE] Pedido de Cotação de Almoxarifado - Bimbo`);
-        const body = encodeURIComponent(bodyText);
-        
-        let bccEmails = (configs.buyerEmail || "").trim();
-        const cc = encodeURIComponent(bccEmails);
+            .replace(/{quantidade}/g, item.qty)
+            .replace(/{dobro_minimo}/g, doubleMinQty)
+            .replace(/\[LOGOTIPO: bimbo-logo\.png\]/g, "=================================\n      [ GRUPO BIMBO BRASIL ]\n    Almoxarifado de Manutenção\n=================================");
+
+        const subject = encodeURIComponent(`[COMPRA CRÍTICA] Reposição de Estoque Bimbo - ${item.name}`);
+        const body = encodeURIComponent(baseBodyText);
+        const cc = encodeURIComponent((configs.buyerEmail || "").trim());
         
         window.location.href = `mailto:${contactStr}?cc=${cc}&subject=${subject}&body=${body}`;
     } else {
-        // Envio estruturado por WhatsApp
+        // Renderização dinâmica da chave nas configurações de WhatsApp substituindo as tags
         let cleanPhone = contactStr.replace(/\D/g, '');
-        
-        // Insere o DDI do Brasil (55) caso falte
-        if (cleanPhone.length === 10 || cleanPhone.length === 11) {
-            cleanPhone = "55" + cleanPhone;
-        }
+        if (cleanPhone.length === 10 || cleanPhone.length === 11) cleanPhone = "55" + cleanPhone;
 
         let whatsappText = (configs.whatsappTemplate || "")
             .replace(/{fornecedor}/g, item.supplier || "Fornecedor")
             .replace(/{item}/g, item.name)
             .replace(/{modelo}/g, item.model || "---")
-            .replace(/{quantidade}/g, item.qty);
+            .replace(/{quantidade}/g, item.qty)
+            .replace(/{dobro_minimo}/g, doubleMinQty);
 
-        const encodedWhatsText = encodeURIComponent(whatsappText);
-        window.open(`https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodedWhatsText}`, '_blank');
+        window.open(`https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(whatsappText)}`, '_blank');
     }
 }
 
@@ -707,44 +640,31 @@ function saveModalItem() {
     const id = document.getElementById("modalItemId").value;
     const name = document.getElementById("modalName").value.trim();
     const minQty = parseInt(document.getElementById("modalMinQty").value) || 0;
-    
     if(!name) { alert("O nome do item é obrigatório!"); return; }
 
     const itemId = id ? parseInt(id) : Date.now();
     let currentQty = 0;
-    
-    if(id) {
-        const existingItem = find(id);
-        if(existingItem) currentQty = existingItem.qty;
-    }
+    if(id) { const existingItem = find(id); if(existingItem) currentQty = existingItem.qty; }
 
     const itemData = {
-        id: itemId,
-        name: name,
+        id: itemId, name: name,
         brand: document.getElementById("modalBrand").value.trim(),
         model: document.getElementById("modalModel").value.trim(),
         supplier: document.getElementById("modalSupplier").value.trim(),
         contact: document.getElementById("modalContact").value.trim(),
         location: document.getElementById("modalLocation").value.trim(),
-        minQty: minQty,
-        qty: currentQty 
+        minQty: minQty, qty: currentQty 
     };
 
-    window.fb.update(window.fb.ref(window.fb.db, 'estoque/' + itemId), itemData)
-        .then(() => {
-            closeItemModal();
-        })
-        .catch(err => alert("Erro ao salvar item: " + err.message));
+    window.fb.update(window.fb.ref(window.fb.db, 'estoque/' + itemId), itemData).then(() => closeItemModal());
 }
 
 function deleteItem(id){    
-    const item = find(id); 
-    if(!item) return;
+    const item = find(id); if(!item) return;
     if(!confirm(`Excluir "${item.name}" ?`)) return;    
     window.fb.remove(window.fb.ref(window.fb.db, 'estoque/' + id));
 }
 
-/* EVENT LISTENERS */
 document.getElementById("search").addEventListener("input", applyFilterAndSort);
 document.getElementById("sort").addEventListener("change", applyFilterAndSort);
 document.getElementById("filter").addEventListener("change", applyFilterAndSort);
@@ -752,12 +672,6 @@ document.getElementById("searchCart").addEventListener("input", preCalculatedTot
 
 document.addEventListener("keydown",(e)=>{    
     if(e.key === "Enter" && document.getElementById("loginScreen").style.display !== "none") checkPassword();
-});
-
-document.querySelector(".main-content").addEventListener("click", () => {
-    if(window.innerWidth <= 768) {
-        document.getElementById("appSidebar").classList.remove("expanded");
-    }
 });
 </script>
 </body>
