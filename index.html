@@ -246,8 +246,8 @@
         </div>
         <div class="config-box">
             <div class="config-group">
-                <label>E-mail do Comprador / Almoxarife (Para Cópia Oculta)</label>
-                <input type="email" id="cfgBuyerEmail" placeholder="compras.manutencao@bimbo.com">
+                <label>E-mails para Cópia Oculta (Cco) - <i>Separe múltiplos e-mails por vírgula</i></label>
+                <input type="text" id="cfgBuyerEmail" placeholder="compras.manutencao@bimbo.com, almoxarife@bimbo.com">
             </div>
             <div class="config-group">
                 <label>Template da Mensagem de Compra</label>
@@ -496,7 +496,8 @@ function applyFilterAndSort() {
 
         if (filter === "statusZero") return qty === 0;
         if (filter === "statusLow") return minQty > 0 && qty > 0 && qty < minQty;
-        if (filter === "statusOk") return qty >= minQty || minQty === 0; 
+        // Correção definitiva da regra de OK: se a qty for maior/igual ao minQty OU se não houver mínimo cadastrado e o estoque não estiver zerado
+        if (filter === "statusOk") return (minQty > 0 && qty >= minQty) || (minQty === 0 && qty > 0); 
         if (filter === "positive") return qty > 0;
         
         return true;
@@ -607,7 +608,10 @@ function triggerSemiAutoPurchase(id) {
         .replace(/{item}/g, item.name).replace(/{modelo}/g, item.model || "---").replace(/{quantidade}/g, item.qty);
     const subject = encodeURIComponent(`[URGENTE] Pedido de Cotação de Almoxarifado - Bimbo`);
     const body = encodeURIComponent(bodyText);
-    const cc = encodeURIComponent(configs.buyerEmail);
+    
+    let bccEmails = (configs.buyerEmail || "").trim();
+    const cc = encodeURIComponent(bccEmails);
+    
     window.location.href = `mailto:${item.contact}?cc=${cc}&subject=${subject}&body=${body}`;
 }
 
