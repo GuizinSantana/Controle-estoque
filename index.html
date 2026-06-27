@@ -63,18 +63,23 @@
         .title-container h1 { color: #002b73; font-size: 30px; margin: 0; }
         .title-container h2 { font-size: 14px; color: #3b5ea8; margin-top: 4px; font-weight: normal; }
         
-        /* BARRAS DE PESQUISA FIXAS (STICKY) */
-        .top-bar { position: sticky; top: 0; z-index: 100; background: #e9eef7; padding: 15px 0; display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; border-bottom: 1px solid rgba(0,0,0,0.05); }
+        /* BARRAS DE PESQUISA E RESUMO FIXAS (STICKY) */
+        .sticky-controls-wrapper { position: sticky; top: 0; z-index: 1000; background: #e9eef7; padding-top: 5px; padding-bottom: 15px; }
+        
+        .top-bar { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; }
         .top-bar input, .top-bar select { padding: 12px; border: 2px solid #0f4fb8; border-radius: 12px; font-size: 16px; background: white; color: #001c4a; font-weight: bold; }
         .top-bar input { flex: 1; }
         
-        .summary-bar { display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 20px; background: #002b73; padding: 12px 20px; border-radius: 12px; color: white; font-weight: bold; font-size: 16px; box-shadow: 0 2px 8px rgba(0,0,0,.15); align-items: center; }
+        .summary-bar { display: flex; flex-wrap: wrap; gap: 15px; background: #002b73; padding: 12px 20px; border-radius: 12px; color: white; font-weight: bold; font-size: 16px; box-shadow: 0 2px 8px rgba(0,0,0,.15); align-items: center; justify-content: space-between; }
+        .summary-left { display: flex; flex-wrap: wrap; gap: 15px; align-items: center; }
         .summary-item { display: flex; align-items: center; gap: 8px; }
         .summary-value { background: #e4001b; padding: 4px 10px; border-radius: 8px; font-size: 15px; }
-        .summary-status-container { display: flex; gap: 12px; margin-left: auto; background: rgba(0,0,0,0.2); padding: 4px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); }
-        .status-badge { font-size: 14px; display: flex; align-items: center; gap: 4px; }
+        
+        .summary-status-container { display: flex; gap: 12px; margin-left: auto; }
+        .status-badge { font-size: 14px; background: rgba(255,255,255,0.1); padding: 4px 10px; border-radius: 8px; font-weight: bold; }
 
-        #container { display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 16px; }
+        /* ================= CONTAINER E CARD DOS ITENS ================= */
+        #container { display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 16px; margin-top: 15px; }
         .card { position: relative; background: linear-gradient(180deg,#0f4fb8,#002b73); border-radius: 18px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,.22); display: flex; flex-direction: column; justify-content: space-between; contain: content; }
         .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; min-height: 48px; }
         .item-name { font-weight: bold; font-size: 19px; color: white; line-height: 1.2; padding-right: 10px; }
@@ -84,11 +89,14 @@
         .item-details p:last-child { border: none; padding: 0; }
         .item-details span { font-weight: bold; color: #7fb2ff; min-width: 85px; }
         .card-text-value { color: white; font-size: 13px; text-align: right; word-break: break-all; padding-left: 10px; display: inline-block; }
+        
+        /* CONTADORES */
         .counter { display: flex; justify-content: center; align-items: center; gap: 15px; margin-bottom: 10px; }
         .counter button { width: 46px; height: 46px; font-size: 24px; font-weight: bold; color: white; border: none; border-radius: 12px; cursor: pointer; }
         .counter button:first-child { background: #d91c1c; }
         .counter button:last-child { background: #00b140; }
-        .value { font-size: 28px; font-weight: bold; min-width: 80px; text-align: center; background: #001c4a; color: white; padding: 8px 12px; border-radius: 12px; border: 2px solid #2f7fff; }
+        .value { font-size: 28px; font-weight: bold; min-width: 80px; text-align: center; background: #001c4a; color: white; padding: 8px 12px; border-radius: 12px; }
+        
         .status-warning { text-align: center; font-weight: bold; font-size: 14px; margin-bottom: 14px; padding: 6px; border-radius: 8px; background: rgba(0, 0, 0, 0.2); }
         .actions { display: flex; gap: 10px; }
         .actions button { flex: 1; padding: 12px; border: none; border-radius: 12px; font-size: 14px; font-weight: bold; color: white; cursor: pointer; }
@@ -130,10 +138,11 @@
         @media(max-width:768px) {
             .main-content { padding: 15px; }
             .title-container h1 { font-size: 23px; }
-            .top-bar { position: relative; padding: 10px 0; }
+            .sticky-controls-wrapper { position: relative; padding: 10px 0; }
             .top-bar input, .top-bar select, #addItemBtn { width: 100%; padding: 14px; }
             .summary-bar { flex-direction: column; align-items: flex-start; gap: 10px; }
-            .summary-status-container { margin-left: 0; width: 100%; justify-content: space-between; }
+            .summary-left { width: 100%; flex-direction: column; align-items: flex-start; gap: 10px; }
+            .summary-status-container { margin-left: 0; width: 100%; flex-direction: column; gap: 10px; }
             #container { grid-template-columns: 1fr; }
             .cart-card { flex-direction: column; align-items: flex-start; gap: 14px; }
             .btn-order { width: 100%; justify-content: center; }
@@ -176,32 +185,40 @@
                 <h2>Almoxarifado de Manutenção</h2>
             </div>
         </div>
-        <div class="top-bar">
-            <input type="text" id="search" placeholder="Pesquisar por qualquer especificação...">
-            <select id="sort">
-                <option value="nameAsc">Nome A-Z</option>
-                <option value="nameDesc">Nome Z-A</option>
-                <option value="qtyDesc">Maior Quantidade</option>
-                <option value="qtyAsc">Menor Quantidade</option>
-            </select>
-            <select id="filter">
-                <option value="all">Todos</option>
-                <option value="zero">Zerados</option>
-                <option value="positive">Acima de 0</option>
-                <option value="below10">Abaixo de 10</option>
-            </select>
-            <button id="addItemBtn" onclick="openItemModal()">+ Novo Item</button>
-        </div>
+        
+        <div class="sticky-controls-wrapper">
+            <div class="top-bar">
+                <input type="text" id="search" placeholder="Pesquisar por especificação, modelo, marca ou fornecedor...">
+                <select id="sort">
+                    <option value="nameAsc">Nome A-Z</option>
+                    <option value="nameDesc">Nome Z-A</option>
+                    <option value="locationAsc">Locação (A-Z)</option>
+                    <option value="qtyDesc">Maior Quantidade</option>
+                    <option value="qtyAsc">Menor Quantidade</option>
+                </select>
+                <select id="filter">
+                    <option value="all">Todos</option>
+                    <option value="statusOk">✔️ Controle OK</option>
+                    <option value="statusLow">⚠️ Estoque Baixo</option>
+                    <option value="statusZero">❌ Estoque Zerado</option>
+                    <option value="positive">Quantidade Acima de 0</option>
+                </select>
+                <button id="addItemBtn" onclick="openItemModal()">+ Novo Item</button>
+            </div>
 
-        <div class="summary-bar">
-            <div class="summary-item"><span>Itens Cadastrados:</span><span id="totalItems" class="summary-value">0</span></div>
-            <div class="summary-item"><span>Quantidade Total:</span><span id="totalQty" class="summary-value">0</span></div>
-            <div class="summary-status-container">
-                <div class="status-badge" style="color:#00b140;">✔️ OK: <span id="countOk">0</span></div>
-                <div class="status-badge" style="color:#ffcc00;">⚠️ Baixo: <span id="countLow">0</span></div>
-                <div class="status-badge" style="color:#ff4d4d;">❌ Zerado: <span id="countZero">0</span></div>
+            <div class="summary-bar">
+                <div class="summary-left">
+                    <div class="summary-item"><span>Itens:</span> <span id="totalItems" class="summary-value">0</span></div>
+                    <div class="summary-item"><span>Qtd Total:</span> <span id="totalQty" class="summary-value">0</span></div>
+                </div>
+                <div class="summary-status-container">
+                    <div class="status-badge" style="color: #00b140;">✔️ OK: <span id="countOk">0</span></div>
+                    <div class="status-badge" style="color: #ffcc00;">⚠️ Baixo: <span id="countLow">0</span></div>
+                    <div class="status-badge" style="color: #ff4d4d;">❌ Zerado: <span id="countZero">0</span></div>
+                </div>
             </div>
         </div>
+
         <div id="container"></div>
     </div>
 
@@ -212,8 +229,10 @@
                 <h2>Itens críticos que necessitam de pedido imediato</h2>
             </div>
         </div>
-        <div class="top-bar">
-            <input type="text" id="searchCart" placeholder="Pesquisar itens no carrinho (Nome, Marca, Modelo ou Fornecedor)...">
+        <div class="sticky-controls-wrapper">
+            <div class="top-bar">
+                <input type="text" id="searchCart" placeholder="Pesquisar itens no carrinho (Nome, Marca, Modelo ou Fornecedor)...">
+            </div>
         </div>
         <div class="cart-grid" id="cartContainer"></div>
     </div>
@@ -268,6 +287,7 @@ const ACCESS_PASSWORD = "Almoxarifado@Bimbo2026";
 let items = [];
 let configs = {};
 let initialized = false;
+let isSeeding = false; 
 
 let filteredList = [];
 let itemsDisplayedCount = 0;
@@ -297,10 +317,10 @@ function updateData(newItemsArray) {
     applyFilterAndSort();
 }
 
-// INJEÇÃO DIVIDIDA EM GRUPOS (BATCHES) PARA EVITAR LIMITES DO FIREBASE
 function seedDatabase() {
     if(!confirm("Banco de dados vazio! Deseja gerar automaticamente os 2.500 itens iniciais (Processado em lotes estáveis)?")) return;
     
+    isSeeding = true;
     alert("Iniciando injeção estruturada de dados. Aguarde a confirmação de conclusão...");
     
     const TOTAL_ITEMS = 2500;
@@ -310,6 +330,7 @@ function seedDatabase() {
     function sendNextBatch() {
         if (currentId > TOTAL_ITEMS) {
             alert("Sucesso! Todos os 2.500 itens foram injetados corretamente.");
+            isSeeding = false;
             return;
         }
 
@@ -333,9 +354,12 @@ function seedDatabase() {
         window.fb.update(window.fb.ref(window.fb.db, 'estoque/'), batch)
             .then(() => {
                 currentId += BATCH_SIZE;
-                setTimeout(sendNextBatch, 600); // Intervalo de estabilidade de escrita
+                setTimeout(sendNextBatch, 600);
             })
-            .catch(err => alert("Erro ao semear banco de dados: " + err.message));
+            .catch(err => {
+                alert("Erro ao semear banco de dados: " + err.message);
+                isSeeding = false;
+            });
     }
 
     sendNextBatch();
@@ -345,6 +369,7 @@ function init() {
     initialized = true;
     
     window.fb.onValue(window.fb.ref(window.fb.db, 'estoque/'), (snapshot) => {
+        if (isSeeding) return; 
         const data = snapshot.val();
         if (!data) {
             items = [];
@@ -367,6 +392,7 @@ function init() {
 
 function find(id){ return items.find(i=>i.id===parseInt(id)); }
 
+/* TAB E SEÇÕES */
 function switchTab(tabId, btn) {
     document.querySelectorAll('.app-section').forEach(s => s.classList.remove('active'));
     document.querySelectorAll('.menu-btn').forEach(b => b.classList.remove('active'));
@@ -386,8 +412,9 @@ function saveSettings() {
         .catch(err => alert("Erro ao salvar configurações: " + err.message));
 }
 
+/* CALCULOS E FILTROS */
 function preCalculatedTotalsAndCart() {
-    let okCount = 0, lowCount = 0, zeroCount = 0, totalQty = 0;
+    let okCount = 0, lowCount = 0, zeroCount = 0, totalQty = 0, criticalCartCount = 0;
     const cartContainer = document.getElementById("cartContainer");
     cartContainer.innerHTML = "";
     const cartFragment = document.createDocumentFragment();
@@ -399,13 +426,20 @@ function preCalculatedTotalsAndCart() {
         const item = items[i];
         if(!item) continue;
         const minQty = item.minQty || 0;
-        totalQty += (item.qty || 0);
+        const currentQty = item.qty || 0;
+        totalQty += currentQty;
 
-        if (item.qty === 0) zeroCount++;
-        else if (item.qty < minQty) lowCount++;
-        else okCount++;
-        
-        if (item.qty < minQty) {
+        if (currentQty === 0) {
+            zeroCount++;
+        } else if (minQty > 0 && currentQty < minQty) {
+            lowCount++;
+        } else {
+            okCount++;
+        }
+
+        if (minQty > 0 && currentQty < minQty) {
+            criticalCartCount++;
+
             const matchesCartSearch = !cartSearch || 
                 item.name.toLowerCase().includes(cartSearch) || 
                 (item.brand && item.brand.toLowerCase().includes(cartSearch)) || 
@@ -414,14 +448,14 @@ function preCalculatedTotalsAndCart() {
 
             if (!matchesCartSearch) continue;
 
-            const isZero = item.qty === 0;
+            const isZero = currentQty === 0;
             const cartCard = document.createElement("div");
             cartCard.className = `cart-card ${!isZero ? 'low-stock' : ''}`;
             cartCard.innerHTML = `
                 <div class="cart-info">
                     <h4>${item.name}</h4>
                     <p><b>Modelo:</b> ${item.model || '---'} | <b>Fornecedor:</b> ${item.supplier || 'Não Definido'}</p>
-                    <p><b>Qtd Atual:</b> <span style="color:#e4001b; font-weight:bold">${item.qty}</span> de um mínimo de ${minQty}</p>
+                    <p><b>Qtd Atual:</b> <span style="color:#e4001b; font-weight:bold">${currentQty}</span> de um mínimo de ${minQty}</p>
                     <span class="reason" style="background:${isZero ? '#ffd2d2':'#ffeeb3'}; color:${isZero ? '#d91c1c':'#b78a00'};">
                         ${isZero ? '❌ ESTOQUE ZERADO' : '⚠️ ESTOQUE CRÍTICO'}
                     </span>
@@ -433,7 +467,7 @@ function preCalculatedTotalsAndCart() {
     }
 
     cartContainer.appendChild(cartFragment);
-    document.getElementById("cartBadge").innerText = lowCount + zeroCount;
+    document.getElementById("cartBadge").innerText = criticalCartCount;
     document.getElementById("totalQty").innerText = totalQty;
     
     const cOk = document.getElementById("countOk"); if(cOk) cOk.innerText = okCount;
@@ -448,23 +482,53 @@ function applyFilterAndSort() {
 
     filteredList = items.filter(item => {
         if (!item) return false;
+        
         const matchesSearch = !search || 
             item.name.toLowerCase().includes(search) || 
             (item.brand && item.brand.toLowerCase().includes(search)) || 
-            (item.model && item.model.toLowerCase().includes(search));
+            (item.model && item.model.toLowerCase().includes(search)) ||
+            (item.supplier && item.supplier.toLowerCase().includes(search));
         
         if (!matchesSearch) return false;
 
-        if (filter === "zero") return item.qty === 0;
-        if (filter === "positive") return item.qty > 0;
-        if (filter === "below10") return item.qty < 10;
+        const minQty = item.minQty || 0;
+        const qty = item.qty || 0;
+
+        if (filter === "statusZero") return qty === 0;
+        if (filter === "statusLow") return minQty > 0 && qty > 0 && qty < minQty;
+        if (filter === "statusOk") return qty >= minQty || minQty === 0; 
+        if (filter === "positive") return qty > 0;
+        
         return true;
     });
 
-    if (sort === "nameAsc") filteredList.sort((a,b) => a.id - b.id);
-    else if (sort === "nameDesc") filteredList.sort((a,b) => b.id - a.id);
-    else if (sort === "qtyAsc") filteredList.sort((a,b)=>a.qty-b.qty);
-    else if (sort === "qtyDesc") filteredList.sort((a,b)=>b.qty-a.qty);
+    if (sort === "nameAsc") {
+        filteredList.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+    }
+    else if (sort === "nameDesc") {
+        filteredList.sort((a, b) => b.name.localeCompare(a.name, undefined, { numeric: true, sensitivity: 'base' }));
+    }
+    else if (sort === "locationAsc") {
+        filteredList.sort((a, b) => {
+            const locA = (a.location || "").trim();
+            const locB = (b.location || "").trim();
+            
+            const isEmptyA = !locA || locA === "---";
+            const isEmptyB = !locB || locB === "---";
+            
+            if (isEmptyA && !isEmptyB) return 1;
+            if (!isEmptyA && isEmptyB) return -1;
+            if (isEmptyA && isEmptyB) return 0;
+            
+            return locA.localeCompare(locB, undefined, { numeric: true, sensitivity: 'base' });
+        });
+    }
+    else if (sort === "qtyAsc") {
+        filteredList.sort((a, b) => a.qty - b.qty);
+    }
+    else if (sort === "qtyDesc") {
+        filteredList.sort((a, b) => b.qty - a.qty);
+    }
 
     document.getElementById("totalItems").innerText = filteredList.length;
     document.getElementById("container").innerHTML = "";
@@ -482,11 +546,16 @@ function loadMoreItems() {
     for (let i = itemsDisplayedCount; i < nextBatchLimit; i++) {
         const item = filteredList[i];
         const minQty = item.minQty || 0;
+        const qty = item.qty || 0;
         let statusHTML = "";
 
-        if (item.qty === 0) statusHTML = `<div class="status-warning" style="color:#ff4d4d;">❌ Estoque Zerado</div>`;
-        else if (item.qty < minQty) statusHTML = `<div class="status-warning" style="color:#ffcc00;">⚠️ Abaixo do Mínimo</div>`;
-        else statusHTML = `<div class="status-warning" style="color:#00b140;">✔️ Controle OK</div>`;
+        if (qty === 0) {
+            statusHTML = `<div class="status-warning" style="color:#ff4d4d;">❌ Estoque Zerado</div>`;
+        } else if (minQty > 0 && qty < minQty) {
+            statusHTML = `<div class="status-warning" style="color:#ffcc00;">⚠️ Abaixo do Mínimo</div>`;
+        } else {
+            statusHTML = `<div class="status-warning" style="color:#00b140;">✔️ Controle OK</div>`;
+        }
 
         const card = document.createElement("div");
         card.className = "card";
@@ -506,7 +575,7 @@ function loadMoreItems() {
             </div>
             <div class="counter">                
                 <button onclick="changeQty(${item.id},-1)">−</button>                
-                <div class="value">${item.qty}</div>                
+                <div class="value">${qty}</div>                
                 <button onclick="changeQty(${item.id},1)">+</button>            
             </div>
             ${statusHTML}
@@ -629,6 +698,7 @@ function deleteItem(id){
     window.fb.remove(window.fb.ref(window.fb.db, 'estoque/' + id));
 }
 
+/* EVENT LISTENERS */
 document.getElementById("search").addEventListener("input", applyFilterAndSort);
 document.getElementById("sort").addEventListener("change", applyFilterAndSort);
 document.getElementById("filter").addEventListener("change", applyFilterAndSort);
