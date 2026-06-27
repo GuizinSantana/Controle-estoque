@@ -7,7 +7,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
-        import { getDatabase, ref, onValue, set, update, remove } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
+        import { getDatabase, ref, onValue, set, update, remove, push, query, orderByKey, limitToLast } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDTiGHVdsmXwoEFIhOxxSVle1Mz4LAFsTE",
@@ -22,7 +22,7 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
         
-        window.fb = { db, ref, set, update, remove, onValue };
+        window.fb = { db, ref, set, update, remove, push, onValue, query, orderByKey, limitToLast };
 
         if (sessionStorage.getItem("bimboLogged") === "true") {
             const loginScreen = document.getElementById("loginScreen");
@@ -119,13 +119,21 @@
         .btn-order { background: #00b140; color: white; border: none; padding: 12px 24px; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 15px; display: flex; align-items: center; gap: 8px; transition: background 0.2s; }
         .btn-order:hover { background: #008f33; }
 
-        /* ================= CONFIGURAÇÕES ================= */
+        /* ================= CONFIGURAÇÕES E TABELAS ================= */
         .config-box { background: white; padding: 25px; border-radius: 18px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); max-width: 750px; }
         .config-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 18px; }
         .config-group label { font-weight: bold; color: #002b73; font-size: 15px; }
         .config-group input, .config-group textarea { padding: 12px; border: 2px solid #ccc; border-radius: 10px; font-size: 15px; outline: none; }
         .config-group textarea { height: 160px; resize: vertical; font-family: monospace; line-height: 1.4; }
         .btn-config-save { background: #002b73; color: white; padding: 12px 25px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; }
+
+        /* Estilos tabela Histórico */
+        .history-table-wrapper { background: white; border-radius: 18px; padding: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); overflow-x: auto; }
+        .history-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+        .history-table th { background: #002b73; color: white; padding: 12px; font-weight: bold; }
+        .history-table td { padding: 12px; border-bottom: 1px solid #e9eef7; color: #333; }
+        .history-table tr:last-child td { border: none; }
+        .badge-history { padding: 4px 8px; border-radius: 6px; font-weight: bold; font-size: 12px; color: white; display: inline-block; }
 
         /* ================= MODAL CUSTOMIZADO ================= */
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; z-index: 10000; }
@@ -138,6 +146,9 @@
         .modal-buttons button { flex: 1; padding: 14px; border: none; border-radius: 10px; font-size: 15px; font-weight: bold; cursor: pointer; color: white; }
         .btn-save { background: #00b140; }
         .btn-cancel { background: #d91c1c; }
+
+        /* ================= ALERTA DE SUCESSO FLUTUANTE ================= */
+        #toastNotice { position: fixed; top: 20px; right: 20px; background: #00b140; color: white; padding: 12px 25px; border-radius: 10px; font-weight: bold; box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: none; z-index: 100000; transition: opacity 0.3s ease; opacity: 0; }
 
         @media(max-width:768px) {
             .main-content { padding: 15px; }
@@ -154,6 +165,8 @@
     </style>
 </head>
 <body>
+
+<div id="toastNotice">Atualizado com sucesso!</div>
 
 <div id="loginScreen">
     <div id="passwordArea">
@@ -177,6 +190,9 @@
         </button>
         <button class="menu-btn" onclick="switchTab('settings', this)">
             <span class="icon">⚙️</span> <span class="btn-text">Configurações</span>
+        </button>
+        <button class="menu-btn" onclick="switchTab('history', this)">
+            <span class="icon">📜</span> <span class="btn-text">Histórico</span>
         </button>
     </div>
 </div>
@@ -261,10 +277,35 @@
                 <label>Template da Mensagem de Compra (WhatsApp)</label>
                 <textarea id="cfgWhatsappTemplate"></textarea>
                 <small style="color:#002b73; margin-top:5px; font-size:12px;">
-                    Chaves disponíveis: <b>{fornecedor}</b>, <b>{item}</b>, <b>{modelo}</b>, <b>{quantidade}</b>, <b>{dobro_minimo}</b> (Quantidade sugerida equivalente a 2x o estoque mínimo).
+                    Chaves disponíveis: <b>{fornecedor}</b>, <b>{item}</b>, <b>{modelo}</b>, <b>{quantidade}</b>, <b>{dobro_minimo}</b>.
                 </small>
             </div>
             <button class="btn-config-save" onclick="saveSettings()">Salvar Configurações</button>
+        </div>
+    </div>
+
+    <div id="section-history" class="app-section">
+        <div class="header">
+            <div class="title-container">
+                <h1>Histórico de Movimentações</h1>
+                <h2>Registro das últimas movimentações de insumos</h2>
+            </div>
+        </div>
+        <div class="history-table-wrapper">
+            <table class="history-table">
+                <thead>
+                    <tr>
+                        <th>Data/Hora</th>
+                        <th>Item (ID)</th>
+                        <th>Tipo</th>
+                        <th>Qtd Alterada</th>
+                        <th>Saldo Atual</th>
+                    </tr>
+                </thead>
+                <tbody id="historyContainer">
+                    <tr><td colspan="5" style="text-align:center;">Carregando histórico...</td></tr>
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
@@ -297,6 +338,21 @@ let isSeeding = false;
 let filteredList = [];
 let itemsDisplayedCount = 0;
 const ITEMS_PER_PAGE = 30; 
+
+let pendingUpdates = {};
+let toastTimeout;
+let scrollTimeout;
+
+function showToast() {
+    const toast = document.getElementById("toastNotice");
+    toast.style.display = "block";
+    setTimeout(() => { toast.style.opacity = "1"; }, 10);
+    clearTimeout(toastTimeout);
+    toastTimeout = setTimeout(() => {
+        toast.style.opacity = "0";
+        setTimeout(() => { toast.style.display = "none"; }, 300);
+    }, 2000);
+}
 
 function checkPassword(){
     const input = document.getElementById("passwordInput").value;
@@ -365,14 +421,20 @@ function init() {
         configs = data || {};
         
         if(!configs.buyerEmail) configs.buyerEmail = "almoxarifado.bimbo@gmail.com";
-        
-        // CORREÇÃO: Inclusão explícita da chave {dobro_minimo} e do logo bimbo-logo.png diretamente na mensagem padrão das configurações
-        if(!configs.template) configs.template = "[LOGOTIPO: bimbo-logo.png]\n\nPrezado {fornecedor},\n\nIdentificamos que o item [{item} - {modelo}] atingiu o nível crítico em nosso estoque.\nSolicitamos o fornecimento de orçamento para a reposição urgente de {dobro_minimo} unidades (Quantidade correspondente a 2x o estoque mínimo do item).\n\nAtenciosamente,\nAlmoxarifado Grupo Bimbo Brasil.";
+        if(!configs.template) configs.template = "[LOGOTIPO: bimbo-logo.png]\n\nPrezado {fornecedor},\n\nIdentificamos que o item [{item} - {modelo}] atingiu o nível crítico em nosso estoque.\nSolicitamos o fornecimento de orçamento para a reposição urgente de {dobro_minimo} unidades.\n\nAtenciosamente,\nAlmoxarifado Grupo Bimbo Brasil.";
         if(!configs.whatsappTemplate) configs.whatsappTemplate = "*Aviso de Compra - Almoxarifado Bimbo*\n\nOlá {fornecedor}, precisamos formalizar uma solicitação urgente de cotação para o item:\n📦 *{item}*\n🔹 *Modelo:* {modelo}\n📉 *Estoque Atual:* {quantidade} unidades\n🛒 *Quantidade do Pedido (2x Mínimo):* {dobro_minimo} unidades.\n\nPor favor, nos envie a proposta comercial o quanto antes. Obrigado!";
         
         document.getElementById("cfgBuyerEmail").value = configs.buyerEmail;
         document.getElementById("cfgEmailTemplate").value = configs.template;
         document.getElementById("cfgWhatsappTemplate").value = configs.whatsappTemplate;
+    });
+
+    const historyRef = window.fb.ref(window.fb.db, 'historico/');
+    const optimizedHistoryQuery = window.fb.query(historyRef, window.fb.orderByKey(), window.fb.limitToLast(300));
+
+    window.fb.onValue(optimizedHistoryQuery, (snapshot) => {
+        const data = snapshot.val();
+        renderHistory(data);
     });
 }
 
@@ -385,6 +447,10 @@ function switchTab(tabId, btn) {
     btn.classList.add('active');
     document.getElementById("appSidebar").classList.remove("expanded");
     window.scrollTo({top: 0});
+    
+    if (tabId === 'dashboard') {
+        applyFilterAndSort();
+    }
 }
 
 function saveSettings() {
@@ -393,7 +459,7 @@ function saveSettings() {
     configs.whatsappTemplate = document.getElementById("cfgWhatsappTemplate").value;
     
     window.fb.set(window.fb.ref(window.fb.db, 'config/'), configs)
-        .then(() => alert("Configurações salvas com sucesso!"))
+        .then(() => showToast())
         .catch(err => alert("Erro ao salvar: " + err.message));
 }
 
@@ -489,14 +555,21 @@ function applyFilterAndSort() {
     else if (sort === "qtyDesc") filteredList.sort((a, b) => b.qty - a.qty);
 
     document.getElementById("totalItems").innerText = filteredList.length;
-    document.getElementById("container").innerHTML = "";
+    
     itemsDisplayedCount = 0;
-    loadMoreItems();
+    const container = document.getElementById("container");
+    if(container) container.innerHTML = "";
+    
+    requestAnimationFrame(() => {
+        loadMoreItems();
+    });
 }
 
 function loadMoreItems() {
     if (itemsDisplayedCount >= filteredList.length) return;
     const container = document.getElementById("container");
+    if (!container) return;
+    
     const fragment = document.createDocumentFragment();
     const nextBatchLimit = Math.min(itemsDisplayedCount + ITEMS_PER_PAGE, filteredList.length);
 
@@ -512,6 +585,7 @@ function loadMoreItems() {
 
         const card = document.createElement("div");
         card.className = "card";
+        card.id = `card-item-${item.id}`;
         card.innerHTML = `            
             <span class="delete-item" onclick="deleteItem(${item.id})">✕</span>
             <div class="card-header">                
@@ -528,7 +602,7 @@ function loadMoreItems() {
             </div>
             <div class="counter">                
                 <button onclick="changeQty(${item.id},-1)">−</button>                
-                <div class="value">${qty}</div>                
+                <div class="value" id="qty-val-${item.id}">${qty}</div>                
                 <button onclick="changeQty(${item.id},1)">+</button>            
             </div>
             ${statusHTML}
@@ -543,9 +617,14 @@ function loadMoreItems() {
 }
 
 window.addEventListener("scroll", () => {
-    if ((window.innerHeight + window.scrollY) >= document.documentElement.scrollHeight - 150) {
-        loadMoreItems();
-    }
+    if (scrollTimeout) return;
+    
+    scrollTimeout = setTimeout(() => {
+        scrollTimeout = null;
+        if ((window.innerHeight + window.scrollY) >= document.documentElement.scrollHeight - 150) {
+            loadMoreItems();
+        }
+    }, 60);
 });
 
 function triggerSemiAutoPurchase(id) {
@@ -557,17 +636,16 @@ function triggerSemiAutoPurchase(id) {
 
     const contactStr = item.contact.trim();
     const minQty = item.minQty || 0;
-    const doubleMinQty = minQty * 2; // Processamento exato das chaves de cálculo
+    const doubleMinQty = minQty * 2;
 
     if (contactStr.includes("@")) {
-        // Renderização dinâmica da chave nas configurações de e-mail substituindo as tags
         let baseBodyText = (configs.template || "")
             .replace(/{fornecedor}/g, item.supplier || "Fornecedor")
             .replace(/{item}/g, item.name)
             .replace(/{modelo}/g, item.model || "---")
             .replace(/{quantidade}/g, item.qty)
             .replace(/{dobro_minimo}/g, doubleMinQty)
-            .replace(/\[LOGOTIPO: bimbo-logo\.png\]/g, "=================================\n      [ GRUPO BIMBO BRASIL ]\n    Almoxarifado de Manutenção\n=================================");
+            .replace(/\[LOGOTIPO: bimbo-logo\.png\]/g, "=================================\n      [ GRUPO BIMBO BRASIL ]\n   Almoxarifado de Manutenção\n=================================");
 
         const subject = encodeURIComponent(`[COMPRA CRÍTICA] Reposição de Estoque Bimbo - ${item.name}`);
         const body = encodeURIComponent(baseBodyText);
@@ -575,7 +653,6 @@ function triggerSemiAutoPurchase(id) {
         
         window.location.href = `mailto:${contactStr}?cc=${cc}&subject=${subject}&body=${body}`;
     } else {
-        // Renderização dinâmica da chave nas configurações de WhatsApp substituindo as tags
         let cleanPhone = contactStr.replace(/\D/g, '');
         if (cleanPhone.length === 10 || cleanPhone.length === 11) cleanPhone = "55" + cleanPhone;
 
@@ -590,20 +667,126 @@ function triggerSemiAutoPurchase(id) {
     }
 }
 
-function changeQty(id,v){    
-    const item = find(id); if(!item) return;
-    item.qty += v; if(item.qty < 0) item.qty = 0;    
-    window.fb.update(window.fb.ref(window.fb.db, 'estoque/' + id), { qty: item.qty });
+function processPendingFirebaseUpdate(id, initialQty) {
+    if (pendingUpdates[id].timeout) clearTimeout(pendingUpdates[id].timeout);
+
+    pendingUpdates[id].timeout = setTimeout(() => {
+        const finalQty = pendingUpdates[id].currentQty;
+        const totalDelta = finalQty - initialQty;
+
+        if (totalDelta !== 0) {
+            window.fb.update(window.fb.ref(window.fb.db, 'estoque/' + id), { qty: finalQty })
+                .then(() => {
+                    showToast();
+                    const typeStr = totalDelta > 0 ? "Entrada (Lote)" : "Saída (Lote)";
+                    logToHistory(id, typeStr, Math.abs(totalDelta), finalQty);
+                    delete pendingUpdates[id];
+                });
+        } else {
+            delete pendingUpdates[id];
+        }
+    }, 800);
 }
+
+function changeQty(id, v) {   
+    const item = find(id); if(!item) return;
+    
+    if (!pendingUpdates[id]) {
+        pendingUpdates[id] = {
+            initialQty: item.qty,
+            currentQty: item.qty,
+            timeout: null
+        };
+    }
+
+    item.qty += v; 
+    if(item.qty < 0) item.qty = 0;    
+    pendingUpdates[id].currentQty = item.qty;
+
+    const label = document.getElementById(`qty-val-${id}`);
+    if (label) label.innerText = item.qty;
+
+    processPendingFirebaseUpdate(id, pendingUpdates[id].initialQty);
+}
+
 function addAmount(id){    
     const amount = parseInt(prompt("Quantidade para adicionar:")); if(isNaN(amount)||amount<=0) return;    
-    const item = find(id); if(item) { item.qty += amount; window.fb.update(window.fb.ref(window.fb.db, 'estoque/' + id), { qty: item.qty }); }
+    const item = find(id); 
+    if(item) { 
+        item.qty += amount; 
+        window.fb.update(window.fb.ref(window.fb.db, 'estoque/' + id), { qty: item.qty }).then(() => {
+            showToast();
+            logToHistory(id, "Entrada", amount, item.qty);
+        }); 
+    }
 }
+
 function removeAmount(id){    
     const amount = parseInt(prompt("Quantidade para retirar:")); if(isNaN(amount)||amount<=0) return;    
     const item = find(id); if(!item) return;
     item.qty -= amount; if(item.qty < 0) item.qty = 0;    
-    window.fb.update(window.fb.ref(window.fb.db, 'estoque/' + id), { qty: item.qty });
+    window.fb.update(window.fb.ref(window.fb.db, 'estoque/' + id), { qty: item.qty }).then(() => {
+        showToast();
+        logToHistory(id, "Saída", amount, item.qty);
+    });
+}
+
+function logToHistory(itemId, type, delta, finalQty) {
+    const item = find(itemId);
+    const itemName = item ? item.name : `Item ${itemId}`;
+    const itemModel = item && item.model ? item.model : "---";
+    const timestamp = new Date().toLocaleString("pt-BR");
+    
+    const logData = {
+        timestamp: timestamp,
+        itemId: itemId,
+        itemName: itemName,
+        itemModel: itemModel,
+        type: type,
+        delta: delta,
+        finalQty: finalQty
+    };
+    
+    window.fb.push(window.fb.ref(window.fb.db, 'historico/'), logData);
+}
+
+function renderHistory(data) {
+    const container = document.getElementById("historyContainer");
+    if (!container) return;
+    if (!data) {
+        container.innerHTML = `<tr><td colspan="5" style="text-align:center;">Nenhum histórico registrado.</td></tr>`;
+        return;
+    }
+    
+    const rawList = Object.values(data);
+    rawList.reverse(); 
+    
+    const fragment = document.createDocumentFragment();
+    rawList.forEach(log => {
+        const tr = document.createElement("tr");
+        let badgeStyle = "background:#00b140;"; 
+        if(log.type.includes("Saída")) badgeStyle = "background:#d91c1c;"; 
+        if(log.type.includes("Ajuste")) badgeStyle = "background:#0f4fb8;"; 
+
+        const displayModel = log.itemModel || "---";
+
+        tr.innerHTML = `
+            <td>${log.timestamp}</td>
+            <td>
+                <b>${log.itemName}</b> 
+                <span style="color:#666; font-size:11px;">(ID: ${log.itemId})</span>
+                <br>
+                <small style="color:#335ea8; font-size:12px;">Mod: ${displayModel}</small>
+            </td>
+            <td><span class="badge-history" style="${badgeStyle}">${log.type}</span></td>
+            <td>${log.delta} un.</td>
+            <td><b>${log.finalQty} un.</b></td>
+        `;
+        fragment.appendChild(tr);
+    });
+    
+    container.innerHTML = "";
+    container.appendChild(fragment);
 }
 
 function openItemModal() {
@@ -644,7 +827,8 @@ function saveModalItem() {
 
     const itemId = id ? parseInt(id) : Date.now();
     let currentQty = 0;
-    if(id) { const existingItem = find(id); if(existingItem) currentQty = existingItem.qty; }
+    let isEdit = false;
+    if(id) { const existingItem = find(id); if(existingItem) { currentQty = existingItem.qty; isEdit = true; } }
 
     const itemData = {
         id: itemId, name: name,
@@ -656,13 +840,19 @@ function saveModalItem() {
         minQty: minQty, qty: currentQty 
     };
 
-    window.fb.update(window.fb.ref(window.fb.db, 'estoque/' + itemId), itemData).then(() => closeItemModal());
+    window.fb.update(window.fb.ref(window.fb.db, 'estoque/' + itemId), itemData).then(() => {
+        closeItemModal();
+        showToast();
+        logToHistory(itemId, isEdit ? "Ajuste Cadastro" : "Item Criado", 0, currentQty);
+    });
 }
 
 function deleteItem(id){    
     const item = find(id); if(!item) return;
     if(!confirm(`Excluir "${item.name}" ?`)) return;    
-    window.fb.remove(window.fb.ref(window.fb.db, 'estoque/' + id));
+    window.fb.remove(window.fb.ref(window.fb.db, 'estoque/' + id)).then(() => {
+        logToHistory(id, "Ajuste (Exclusão)", 0, 0);
+    });
 }
 
 document.getElementById("search").addEventListener("input", applyFilterAndSort);
