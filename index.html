@@ -108,7 +108,7 @@
         .actions button:first-child { background: #12a150; }
         .actions button:last-child { background: #d91c1c; }
         #addItemBtn { background: #001c4a; color: white; border: none; border-radius: 12px; padding: 12px 20px; font-size: 16px; font-weight: bold; cursor: pointer; }
-        .delete-item { position: absolute; top: 4px; right: 4px; width: 20px; height: 20px; border-radius: 50%; border: 1px solid #ff0000; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 11px; font-weight: bold; background: #ff0000; color: white; z-index: 99; line-height: 1; }
+        .delete-item { position: absolute; top: 4px; right: 4px; width: 15px; height: 15px; border-radius: 50%; border: 1px solid #ff0000; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 9px; font-weight: bold; background: #ff0000; color: white; z-index: 99; line-height: 1; }
 
         /* ================= PAINEL DO CARRINHO ================= */
         .cart-grid { display: flex; flex-direction: column; gap: 15px; margin-top: 15px; }
@@ -345,6 +345,7 @@ const ITEMS_PER_PAGE = 30;
 let pendingUpdates = {};
 let toastTimeout;
 let scrollTimeout;
+let lastFilteredLength = 0;
 
 function showToast() {
     const toast = document.getElementById("toastNotice");
@@ -393,6 +394,7 @@ function switchTab(tabId, btn) {
     window.scrollTo({top: 0});
     
     if (tabId === 'dashboard') {
+        lastFilteredLength = 0;
         applyFilterAndSort();
     } else if (tabId === 'cart') {
         preCalculatedTotalsAndCart();
@@ -526,14 +528,19 @@ function applyFilterAndSort() {
     const totalItemsEl = document.getElementById("totalItems");
     if (totalItemsEl) totalItemsEl.innerText = filteredList.length;
     
-    itemsDisplayedCount = 0;
-    const container = document.getElementById("container");
-    if(container) container.innerHTML = "";
-    
-    if (currentActiveTab === 'dashboard') {
-        requestAnimationFrame(() => {
-            loadMoreItems();
-        });
+    if (filteredList.length !== lastFilteredLength) {
+        lastFilteredLength = filteredList.length;
+        itemsDisplayedCount = 0;
+        const container = document.getElementById("container");
+        if(container) container.innerHTML = "";
+        
+        if (currentActiveTab === 'dashboard') {
+            requestAnimationFrame(() => {
+                loadMoreItems();
+            });
+        }
+    } else {
+        filteredList.forEach(item => updateSingleCardUI(item.id));
     }
 }
 
@@ -707,7 +714,6 @@ function updateSingleCardUI(id) {
 
     const card = document.getElementById(`card-item-${id}`);
     if (card) {
-        // Atualiza os textos cadastrais caso tenham mudado
         const nameEl = card.querySelector('.item-name');
         const brandEl = card.querySelector('.brand-val');
         const modelEl = card.querySelector('.model-val');
@@ -892,6 +898,11 @@ function saveModalItem() {
     window.fb.update(window.fb.ref(window.fb.db, 'estoque/' + itemId), itemData).then(() => {
         closeItemModal();
         showToast();
+        // LINHA CORRIGIDA: lastFilteredLength não é mais resetado para 0 se for edição,
+        // garantindo que a tela não dê refresh total e permaneça no mesmo scroll.
+        if (!isEdit) {
+            lastFilteredLength = 0;
+        }
         logToHistory(itemId, isEdit ? "Ajuste Cadastro" : "Item Criado", 0, currentQty);
     });
 }
@@ -904,6 +915,7 @@ function deleteItem(id){
     const modelBackup = item.model || "---";
 
     window.fb.remove(window.fb.ref(window.fb.db, 'estoque/' + id)).then(() => {
+        showToast();
         const now = new Date();
         const logData = {
             timestamp: now.toLocaleString("pt-BR"),
@@ -915,6 +927,7 @@ function deleteItem(id){
             delta: 0,
             finalQty: 0
         };
+        lastFilteredLength = 0;
         window.fb.push(window.fb.ref(window.fb.db, 'historico/'), logData);
     });
 }
@@ -924,16 +937,7 @@ function updateData(newItemsArray) {
     preCalculatedTotalsAndCart();
     
     if (currentActiveTab === 'dashboard') {
-        const container = document.getElementById("container");
-        if (container && container.children.length === 0) {
-            applyFilterAndSort();
-        } else {
-            items.forEach(item => {
-                if (!pendingUpdates[item.id]) {
-                    updateSingleCardUI(item.id);
-                }
-            });
-        }
+        applyFilterAndSort();
     }
 }
 
@@ -1020,9 +1024,9 @@ function init() {
     const fEl = document.getElementById("filter");
     const sCartEl = document.getElementById("searchCart");
 
-    if(sEl) sEl.addEventListener("input", applyFilterAndSort);
-    if(soEl) soEl.addEventListener("change", applyFilterAndSort);
-    if(fEl) fEl.addEventListener("change", applyFilterAndSort);
+    if(sEl) sEl.addEventListener("input", () => { lastFilteredLength = 0; applyFilterAndSort(); });
+    if(soEl) soEl.addEventListener("change", () => { lastFilteredLength = 0; applyFilterAndSort(); });
+    if(fEl) fEl.addEventListener("change", () => { lastFilteredLength = 0; applyFilterAndSort(); });
     if(sCartEl) sCartEl.addEventListener("input", preCalculatedTotalsAndCart);
 }
 
