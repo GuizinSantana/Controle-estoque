@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -194,6 +195,9 @@
             #container { grid-template-columns: 1fr; }
             .cart-card { flex-direction: column; align-items: flex-start; gap: 14px; }
             .btn-order { width: 100%; justify-content: center; }
+		#listaSugestoes li:hover {
+    background-color: #0f4fb8;
+}
         }
     </style>
 </head>
@@ -229,6 +233,9 @@
         </button>
         <button class="menu-btn" onclick="switchTab('history', this)">
             <span class="icon">📜</span> <span class="btn-text">Histórico</span>
+        </button>
+        <button class="menu-btn" id="nav-mecanicos" onclick="switchTab('mecanicos', this)" style="display: none;">
+            <span class="icon">👥</span> <span class="btn-text">Mecânicos</span>
         </button>
     </div>
 </div>
@@ -373,6 +380,38 @@
             </table>
         </div>
     </div>
+
+    <div id="section-mecanicos" class="app-section">
+        <div class="header">
+            <div class="title-container">
+                <h1>Gestão de Mecânicos</h1>
+                <h2>Cadastro e controle de acesso da equipe</h2>
+            </div>
+        </div>
+        <div class="sticky-controls-wrapper">
+            <div class="top-bar">
+                <!-- Botão com a classe padrão do sistema -->
+                <button id="addItemBtn" onclick="openMecanicoModal()">+ Novo Mecânico</button>
+            </div>
+        </div>
+        
+        <div class="history-table-wrapper">
+            <table class="history-table">
+                <thead>
+    <tr>
+        <th>Nome Completo</th>
+        <th>Registro/ID</th>
+        <th>Supervisor</th>
+        <th>Status</th>
+        <th>Ações</th>
+    </tr>
+</thead>
+<tbody id="mecanicosContainer">
+    <tr><td colspan="5" style="text-align:center;">Nenhum mecânico cadastrado.</td></tr>
+</tbody>
+            </table>
+        </div>
+    </div>
 </div>
 
 <div id="itemModal" class="modal-overlay">
@@ -407,10 +446,12 @@
             <label>Número da Ordem de Serviço (OS)</label>
             <input type="text" id="reqOS" placeholder="Ex: 10452">
         </div>
-        <div class="modal-group">
-            <label>Nome do Mecânico / Requisitante</label>
-            <input type="text" id="reqMecanico" placeholder="Seu Nome Completo">
-        </div>
+        <div class="modal-group" style="position: relative;">
+    <label>Nome do Mecânico / Requisitante</label>
+    <input type="text" id="reqMecanico" placeholder="Digite para buscar..." onkeyup="filtrarMecanicosSugestao()" autocomplete="off">
+    <!-- Lista de sugestões abaixo do input -->
+    <ul id="listaSugestoes" style="position: absolute; width: 100%; background: #001c4a; border: 1px solid #2f7fff; border-radius: 8px; list-style: none; z-index: 999; display: none; margin-top: 5px; max-height: 150px; overflow-y: auto;"></ul>
+</div>
         <div class="modal-group">
             <label>Linha de Produção</label>
             <select id="reqLinha">
@@ -437,6 +478,28 @@
     </div>
 </div>
 
+<div id="mecanicoModal" class="modal-overlay">
+    <div class="modal-box">
+        <h3>Cadastrar Mecânico</h3>
+        <div class="modal-group"><label>Nome Completo</label><input type="text" id="mecName" onblur="formatarTextoCapitalizado(this)"></div>
+        <div class="modal-group"><label>Registro/ID</label><input type="text" id="mecId"></div>
+        <div class="modal-group">
+            <label>Supervisor</label>
+            <select id="mecSupervisor" style="width: 100%; padding: 8px; margin-top: 5px;">
+                <option value="Cleber Alexon de Freitas">Cleber Alexon de Freitas</option>
+                <option value="Thiago Madureira dos Santos">Thiago Madureira dos Santos</option>
+                <option value="Clodoaldo Barreiro da Silva">Clodoaldo Barreiro da Silva</option>
+                <option value="Valdomiro de Souza Melo Junior">Valdomiro de Souza Melo Junior</option>
+                <option value="Luiz Paulo Feitosa Santos">Luiz Paulo Feitosa Santos</option>
+            </select>
+        </div>
+        <div class="modal-buttons">
+            <button class="btn-save" onclick="saveMecanico()">Salvar</button>
+            <button class="btn-cancel" onclick="closeMecanicoModal()">Cancelar</button>
+        </div>
+    </div>
+</div>
+
 <div id="historyDetailModal" class="modal-overlay">
     <div class="modal-box" style="border-color: #ffcc00; width: min(540px, 95vw);">
         <h3>🔍 Detalhes da Movimentação</h3>
@@ -447,22 +510,143 @@
     </div>
 </div>
 
+<div id="mecanicoStatsModal" class="modal-overlay">
+    <div class="modal-box" style="border-color: #7fb2ff; width: min(480px, 90vw);">
+        <h3 id="statsTitle">Estatísticas do Mecânico</h3>
+        <div id="statsContent" class="log-details-list">
+            <!-- Conteúdo injetado via JS -->
+        </div>
+        <div class="modal-buttons">
+            <button class="btn-cancel" onclick="closeStatsModal()" style="background: #002b73;">Fechar</button>
+        </div>
+    </div>
+</div>
+
 <script>
 let items = [];
 let historyList = [];
 let pendingApprovalsList = [];
+let mecanicosList = []; // Array para salvar os dados dos mecânicos
 let configs = {};
 let initialized = false;
 let filteredList = [];
 let itemsDisplayedCount = 0;
 let historyDisplayedCount = 0;
 let currentActiveTab = 'dashboard';
-const ITEMS_PER_PAGE = 30; 
+const ITEMS_PER_PAGE = 30;
 
 let pendingUpdates = {};
 let toastTimeout;
 let scrollTimeout;
 let lastFilteredLength = 0;
+
+// --- FUNÇÕES GESTÃO DE MECÂNICOS ---
+
+function saveMecanico() {
+    const nome = document.getElementById("mecName").value;
+    const id = document.getElementById("mecId").value;
+    const supervisor = document.getElementById("mecSupervisor").value; 
+    
+    if(!nome || !id) {
+        alert("Por favor, preencha o Nome e o ID.");
+        return;
+    }
+
+    const novoMecanico = { nome, id, supervisor, status: "Ativo" };
+    
+    // Salva no Firebase na pasta 'mecanicos' usando o ID como chave
+    window.fb.set(window.fb.ref(window.fb.db, 'mecanicos/' + id), novoMecanico)
+    .then(() => {
+        alert("Mecânico salvo com sucesso!");
+        closeMecanicoModal();
+        
+        // Limpar campos após salvar
+        document.getElementById("mecName").value = "";
+        document.getElementById("mecId").value = "";
+    })
+    .catch(err => alert("Erro ao salvar: " + err.message));
+}
+
+function renderMecanicos() {
+    const container = document.getElementById("mecanicosContainer");
+    if(mecanicosList.length === 0) {
+        container.innerHTML = '<tr><td colspan="5" style="text-align:center;">Nenhum mecânico cadastrado.</td></tr>';
+        return;
+    }
+    
+    container.innerHTML = mecanicosList.map((m, index) => `
+        <tr style="cursor: pointer;" onclick="abrirStatsMecanico('${m.nome}')">
+            <td style="color: #0f4fb8; font-weight: bold; text-decoration: underline;">${m.nome}</td>
+            <td>${m.id}</td>
+            <td>${m.supervisor}</td>
+            <td><span class="status-badge" style="color:#00b140;">${m.status}</span></td>
+            <td><button class="btn-table-reject" onclick="event.stopPropagation(); removerMecanico(${index})">Remover</button></td>
+        </tr>
+    `).join('');
+}
+
+function removerMecanico(index) {
+    const mecanicoParaRemover = mecanicosList[index];
+    
+    if(confirm("Deseja remover o mecânico " + mecanicoParaRemover.nome + "?")) {
+        // Remove do Firebase usando o ID único do mecânico
+        window.fb.remove(window.fb.ref(window.fb.db, 'mecanicos/' + mecanicoParaRemover.id))
+        .then(() => {
+            alert("Mecânico removido com sucesso!");
+            // Não é necessário dar splice aqui, pois o onValue no init() 
+            // já atualizará o array mecanicosList automaticamente ao detectar a mudança no Firebase
+        })
+        .catch(err => {
+            alert("Erro ao remover do banco de dados: " + err.message);
+        });
+    }
+}
+
+function filtrarMecanicosSugestao() {
+    const input = document.getElementById("reqMecanico");
+    const filtro = input.value.toLowerCase();
+    const lista = document.getElementById("listaSugestoes");
+    
+    // Limpa a lista anterior
+    lista.innerHTML = "";
+
+    if (filtro.length === 0) {
+        lista.style.display = "none";
+        return;
+    }
+
+    // Filtra os mecânicos que correspondem ao que foi digitado
+    const sugestoes = mecanicosList.filter(m => 
+        m.nome.toLowerCase().includes(filtro)
+    );
+
+    if (sugestoes.length > 0) {
+        sugestoes.forEach(m => {
+            const li = document.createElement("li");
+            li.textContent = m.nome;
+            li.style.padding = "10px";
+            li.style.cursor = "pointer";
+            li.style.color = "white";
+            li.style.borderBottom = "1px solid #2f7fff";
+            
+            // Ao clicar na sugestão, preenche o campo
+            li.onclick = () => {
+                input.value = m.nome;
+                lista.style.display = "none";
+            };
+            lista.appendChild(li);
+        });
+        lista.style.display = "block";
+    } else {
+        lista.style.display = "none";
+    }
+}
+
+function openMecanicoModal() { document.getElementById('mecanicoModal').style.display = 'flex'; 
+}
+
+function closeMecanicoModal() { document.getElementById('mecanicoModal').style.display = 'none'; 
+}
 
 function getUserRole() {
     return sessionStorage.getItem("bimboRole") || "user";
@@ -485,11 +669,14 @@ function checkPassword(){
     if(input === "Almoxarifado@Bimbo2026"){
         sessionStorage.setItem("bimboRole", "admin");
         document.getElementById("loginScreen").style.display = "none";
+        document.getElementById("nav-mecanicos").style.display = "flex"; // O botão deve entrar aqui
         applyViewModeRules();
+
         if(!initialized){ init(); }
     } else if(input === "Mecanica@Bimbo2026") {
         sessionStorage.setItem("bimboRole", "user");
         document.getElementById("loginScreen").style.display = "none";
+        // REMOVA a linha do nav-mecanicos daqui
         applyViewModeRules();
         if(!initialized){ init(); }
     } else { 
@@ -499,10 +686,15 @@ function checkPassword(){
 
 function applyViewModeRules() {
     const role = getUserRole();
+    const btnMecanicos = document.getElementById("nav-mecanicos");
+    
     if(role === "user") {
         document.body.classList.add("mecanico-view");
         document.getElementById("dashTitleMain").innerText = "Painel de Requisições";
         document.getElementById("dashTitleSub").innerText = "Solicitação Exclusiva de Insumos - Mecânica";
+        
+        // Esconde o botão de mecânicos para usuários comuns
+        if(btnMecanicos) btnMecanicos.style.display = "none";
         
         const sortEl = document.getElementById("sort");
         const filterEl = document.getElementById("filter");
@@ -510,6 +702,8 @@ function applyViewModeRules() {
         if(filterEl) filterEl.value = "positive"; 
     } else {
         document.body.classList.remove("mecanico-view");
+        // Mostra o botão de mecânicos para o Admin
+        if(btnMecanicos) btnMecanicos.style.display = "flex";
     }
 }
 
@@ -779,6 +973,7 @@ function closeRequisitionModal() {
 }
 
 function submitMecanicoRequisition() {
+    document.getElementById("listaSugestoes").style.display = "none"
     const id = document.getElementById("reqItemId").value;
     const os = document.getElementById("reqOS").value.trim();
     let mecanicoRaw = document.getElementById("reqMecanico").value.trim();
@@ -967,6 +1162,35 @@ function openHistoryDetailModal(log) {
 
 function closeHistoryDetailModal() {
     document.getElementById("historyDetailModal").style.display = "none";
+}
+
+function abrirStatsMecanico(nome) {
+    // Filtra histórico de requisições concluídas
+    const historicoDoMecanico = historyList.filter(log => log.solicitante === nome);
+    
+    // Filtra pendentes (aprovacoes)
+    const pendentesDoMecanico = pendingApprovalsList.filter(req => req.solicitante === nome);
+    
+    const aceitas = historicoDoMecanico.filter(l => l.type.includes("Saída")).length;
+    const recusadas = historicoDoMecanico.filter(l => l.type.includes("Recusada")).length;
+    const semOS = pendentesDoMecanico.length;
+    const totalReq = aceitas + recusadas + semOS;
+
+    const statsContent = document.getElementById("statsContent");
+    document.getElementById("statsTitle").innerText = "Resumo: " + nome;
+    
+    statsContent.innerHTML = `
+        <div class="log-details-item"><span>Total de Movimentações</span><p>${totalReq}</p></div>
+        <div class="log-details-item" style="border-left-color: #00b140;"><span>Requisições Aceitas</span><p>${aceitas}</p></div>
+        <div class="log-details-item" style="border-left-color: #d91c1c;"><span>Requisições Recusadas</span><p>${recusadas}</p></div>
+        <div class="log-details-item" style="border-left-color: #ffcc00;"><span>Aguardando Liberação</span><p>${semOS}</p></div>
+    `;
+    
+    document.getElementById("mecanicoStatsModal").style.display = "flex";
+}
+
+function closeStatsModal() {
+    document.getElementById("mecanicoStatsModal").style.display = "none";
 }
 
 window.addEventListener("scroll", () => {
@@ -1296,6 +1520,16 @@ function init() {
     
     applyViewModeRules();
 
+    window.fb.onValue(window.fb.ref(window.fb.db, 'mecanicos/'), (snapshot) => {
+        const data = snapshot.val();
+        if (!data) { 
+            mecanicosList = []; 
+        } else { 
+            mecanicosList = Object.values(data);          
+        }
+           renderMecanicos();
+    });
+
     window.fb.onValue(window.fb.ref(window.fb.db, 'estoque/'), (snapshot) => {
         const data = snapshot.val();
         if (!data) { items = []; } 
@@ -1357,14 +1591,6 @@ function init() {
     const detOverlay = document.getElementById("historyDetailModal");
     if (detOverlay) { detOverlay.addEventListener("click", function(e) { if(e.target === this) closeHistoryDetailModal(); }); }
 
-    // Formatação visual em tempo real para o mecânico (Evento Blur)
-    const reqMecanicoInput = document.getElementById("reqMecanico");
-    if (reqMecanicoInput) {
-        reqMecanicoInput.addEventListener("blur", function() {
-            let val = this.value.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-            this.value = val.toLowerCase().replace(/(?:^|\s)\S/g, function(a) { return a.toUpperCase(); });
-        });
-    }
 
     const sEl = document.getElementById("search");
     const soEl = document.getElementById("sort");
@@ -1381,6 +1607,13 @@ document.addEventListener("keydown",(e)=>{
     const loginScreen = document.getElementById("loginScreen");
     if(e.key === "Enter" && loginScreen && loginScreen.style.display !== "none") checkPassword();
 });
+
+// Função para formatar nomes automaticamente
+function formatarTextoCapitalizado(input) {
+    if (!input.value) return;
+    let valor = input.value.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    input.value = valor.toLowerCase().replace(/(?:^|\s)\S/g, (char) => char.toUpperCase());
+}
 </script>
 </body>
 </html>
