@@ -1056,8 +1056,11 @@ function processApproval(key, isApproved) {
     const req = pendingApprovalsList.find(r => r._key === key);
     if (!req) return;
 
-    if (!isApproved) {
-        if (confirm(`Tem certeza que deseja recusar a retirada de ${req.qty} un. de "${req.itemName}"?`)) {
+   if (!isApproved) {
+        if (confirm(`Tem certeza que deseja recusar a retirada?`)) {
+            // Registra a recusa no histórico antes de remover do pendente
+            logToHistory(req.itemId, "Requisição Recusada", 0, find(req.itemId).qty, req.solicitante, req.os, req.localAplicacao, "Almoxarifado");
+            
             window.fb.remove(window.fb.ref(window.fb.db, `requisicoes_pendentes/${key}`)).then(() => showToast());
         }
         return;
@@ -1165,25 +1168,27 @@ function closeHistoryDetailModal() {
 }
 
 function abrirStatsMecanico(nome) {
-    // Filtra histórico de requisições concluídas
+    // Filtra todas as movimentações do histórico deste mecânico
     const historicoDoMecanico = historyList.filter(log => log.solicitante === nome);
     
-    // Filtra pendentes (aprovacoes)
+    // Filtra as pendentes atuais do Firebase
     const pendentesDoMecanico = pendingApprovalsList.filter(req => req.solicitante === nome);
     
+    // Contadores
     const aceitas = historicoDoMecanico.filter(l => l.type.includes("Saída")).length;
+    // Busca por registros no histórico que contenham a palavra "Recusada"
     const recusadas = historicoDoMecanico.filter(l => l.type.includes("Recusada")).length;
-    const semOS = pendentesDoMecanico.length;
-    const totalReq = aceitas + recusadas + semOS;
+    const emAberto = pendentesDoMecanico.length;
+    const totalReq = aceitas + recusadas + emAberto;
 
     const statsContent = document.getElementById("statsContent");
     document.getElementById("statsTitle").innerText = "Resumo: " + nome;
     
     statsContent.innerHTML = `
-        <div class="log-details-item"><span>Total de Movimentações</span><p>${totalReq}</p></div>
-        <div class="log-details-item" style="border-left-color: #00b140;"><span>Requisições Aceitas</span><p>${aceitas}</p></div>
-        <div class="log-details-item" style="border-left-color: #d91c1c;"><span>Requisições Recusadas</span><p>${recusadas}</p></div>
-        <div class="log-details-item" style="border-left-color: #ffcc00;"><span>Aguardando Liberação</span><p>${semOS}</p></div>
+        <div class="log-details-item"><span>Total de Solicitações</span><p>${totalReq}</p></div>
+        <div class="log-details-item" style="border-left-color: #00b140;"><span>Autorizadas (Saídas)</span><p>${aceitas}</p></div>
+        <div class="log-details-item" style="border-left-color: #d91c1c;"><span>Recusadas</span><p>${recusadas}</p></div>
+        <div class="log-details-item" style="border-left-color: #ffcc00;"><span>Aguardando Liberação</span><p>${emAberto}</p></div>
     `;
     
     document.getElementById("mecanicoStatsModal").style.display = "flex";
