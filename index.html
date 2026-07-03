@@ -1,4 +1,5 @@
 
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -580,7 +581,12 @@ function renderMecanicos() {
             <td>${m.id}</td>
             <td>${m.supervisor}</td>
             <td><span class="status-badge" style="color:#00b140;">${m.status}</span></td>
-            <td><button class="btn-table-reject" onclick="event.stopPropagation(); removerMecanico(${index})">Remover</button></td>
+            <td>
+                <div style="display: flex; gap: 5px; justify-content: center;">
+                    <button class="btn-table-approve" style="padding: 6px 10px;" onclick="event.stopPropagation(); abrirEdicaoMecanico('${m.id}')">✎</button>
+                    <button class="btn-table-reject" style="padding: 6px 10px;" onclick="event.stopPropagation(); removerMecanico(${index})">✕</button>
+                </div>
+            </td>
         </tr>
     `).join('');
 }
@@ -645,7 +651,36 @@ function filtrarMecanicosSugestao() {
 function openMecanicoModal() { document.getElementById('mecanicoModal').style.display = 'flex'; 
 }
 
-function closeMecanicoModal() { document.getElementById('mecanicoModal').style.display = 'none'; 
+function abrirEdicaoMecanico(id) {
+    const mecanico = mecanicosList.find(m => m.id === id);
+    if (!mecanico) return;
+
+    // Preenche os campos do modal com os dados atuais
+    document.getElementById("mecName").value = mecanico.nome;
+    document.getElementById("mecId").value = mecanico.id;
+    document.getElementById("mecId").readOnly = true; // Bloqueia o ID para não alterar a chave principal no Firebase
+    document.getElementById("mecSupervisor").value = mecanico.supervisor;
+
+    // Ajusta o título do modal
+    document.querySelector("#mecanicoModal h3").innerText = "Editar Mecânico";
+    
+    // Abre o modal
+    document.getElementById("mecanicoModal").style.display = 'flex';
+}
+
+function closeMecanicoModal() { 
+    // Fecha o modal
+    document.getElementById("mecanicoModal").style.display = 'none';
+    
+    // Reseta o título para o padrão de cadastro
+    document.querySelector("#mecanicoModal h3").innerText = "Cadastrar Mecânico";
+    
+    // Limpa os campos
+    document.getElementById("mecName").value = "";
+    document.getElementById("mecId").value = "";
+    
+    // Desbloqueia o campo ID para novos cadastros
+    document.getElementById("mecId").readOnly = false;
 }
 
 function getUserRole() {
