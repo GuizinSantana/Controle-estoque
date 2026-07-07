@@ -1,5 +1,6 @@
 
 
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -91,37 +92,51 @@
         .status-badge { font-size: 14px; background: rgba(255,255,255,0.1); padding: 4px 10px; border-radius: 8px; font-weight: bold; }
 
         /* ================= CONTAINER E CARD DOS ITENS ================= */
-        #container { display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 16px; margin-top: 15px; }
-        .card { position: relative; background: linear-gradient(180deg,#0f4fb8,#002b73); border-radius: 18px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,.22); display: flex; flex-direction: column; justify-content: space-between; contain: content; }
-        .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; min-height: 48px; }
-        .item-name { font-weight: bold; font-size: 19px; color: white; line-height: 1.2; padding-right: 10px; }
-        .gear { cursor: pointer; font-size: 22px; color: white; line-height: 1; }
-        body.mecanico-view .gear { display: none !important; }
-        .item-details { background: rgba(0, 28, 74, 0.6); border-radius: 10px; padding: 10px; margin-bottom: 14px; font-size: 13px; display: flex; flex-direction: column; gap: 6px; }
-        .item-details p { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 4px; }
-        .item-details p:last-child { border: none; padding: 0; }
-        .item-details span { font-weight: bold; color: #7fb2ff; min-width: 85px; }
-        .card-text-value { color: white; font-size: 13px; text-align: right; word-break: break-all; padding-left: 10px; display: inline-block; }
-        
-        .counter { display: flex; justify-content: center; align-items: center; gap: 15px; margin-bottom: 10px; }
-        body.mecanico-view .counter { display: none !important; }
-        .counter button { width: 46px; height: 46px; font-size: 24px; font-weight: bold; color: white; border: none; border-radius: 12px; cursor: pointer; }
-        .counter button:first-child { background: #d91c1c; }
-        .counter button:last-child { background: #00b140; }
-        .value { font-size: 28px; font-weight: bold; min-width: 80px; text-align: center; background: #001c4a; color: white; padding: 8px 12px; border-radius: 12px; }
-        body.mecanico-view .mecanico-qty-display { display: block !important; text-align: center; margin-bottom: 15px; color: white; font-size: 16px; background: #001c4a; padding: 8px; border-radius: 10px; font-weight: bold; }
-        
-        .status-warning { text-align: center; font-weight: bold; font-size: 14px; margin-bottom: 14px; padding: 6px; border-radius: 8px; background: rgba(0, 0, 0, 0.2); }
-        body.mecanico-view .status-warning { display: none !important; }
-        .actions { display: flex; gap: 10px; }
-        body.mecanico-view .actions { display: none !important; }
-        .actions button { flex: 1; padding: 12px; border: none; border-radius: 12px; font-size: 14px; font-weight: bold; color: white; cursor: pointer; }
-        .actions button:first-child { background: #12a150; }
-        .actions button:last-child { background: #d91c1c; }
-        #addItemBtn { background: #001c4a; color: white; border: none; border-radius: 12px; padding: 12px 20px; font-size: 16px; font-weight: bold; cursor: pointer; }
-        body.mecanico-view #addItemBtn { display: none !important; }
-        .delete-item { position: absolute; top: 4px; right: 4px; width: 15px; height: 15px; border-radius: 50%; border: 1px solid #ff0000; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 9px; font-weight: bold; background: #ff0000; color: white; z-index: 99; line-height: 1; }
-        body.mecanico-view .delete-item { display: none !important; }
+       /* --- CONTAINER: Regras corrigidas --- */
+#container { 
+    display: grid; 
+    grid-template-columns: repeat(4, 1fr); /* 4 colunas padrão */
+    gap: 16px; 
+    margin-top: 15px; 
+    transition: grid-template-columns 0.3s ease; /* Efeito suave ao mudar */
+}
+
+/* Quando a barra lateral estiver com a classe 'expanded' (3 colunas) */
+.sidebar.expanded ~ .main-content #container { 
+    grid-template-columns: repeat(3, 1fr); 
+}
+
+/* --- DEMAIS ESTILOS --- */
+.card { position: relative; background: linear-gradient(180deg,#0f4fb8,#002b73); border-radius: 18px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,.22); display: flex; flex-direction: column; justify-content: space-between; contain: content; }
+.card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; min-height: 48px; }
+.item-name { font-weight: bold; font-size: 19px; color: white; line-height: 1.2; padding-right: 10px; }
+.gear { cursor: pointer; font-size: 22px; color: white; line-height: 1; }
+body.mecanico-view .gear { display: none !important; }
+.item-details { background: rgba(0, 28, 74, 0.6); border-radius: 10px; padding: 10px; margin-bottom: 14px; font-size: 13px; display: flex; flex-direction: column; gap: 6px; }
+.item-details p { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 4px; }
+.item-details p:last-child { border: none; padding: 0; }
+.item-details span { font-weight: bold; color: #7fb2ff; min-width: 85px; }
+.card-text-value { color: white; font-size: 13px; text-align: right; word-break: break-all; padding-left: 10px; display: inline-block; }
+
+.counter { display: flex; justify-content: center; align-items: center; gap: 15px; margin-bottom: 10px; }
+body.mecanico-view .counter { display: none !important; }
+.counter button { width: 46px; height: 46px; font-size: 24px; font-weight: bold; color: white; border: none; border-radius: 12px; cursor: pointer; }
+.counter button:first-child { background: #d91c1c; }
+.counter button:last-child { background: #00b140; }
+.value { font-size: 28px; font-weight: bold; min-width: 80px; text-align: center; background: #001c4a; color: white; padding: 8px 12px; border-radius: 12px; }
+body.mecanico-view .mecanico-qty-display { display: block !important; text-align: center; margin-bottom: 15px; color: white; font-size: 16px; background: #001c4a; padding: 8px; border-radius: 10px; font-weight: bold; }
+
+.status-warning { text-align: center; font-weight: bold; font-size: 14px; margin-bottom: 14px; padding: 6px; border-radius: 8px; background: rgba(0, 0, 0, 0.2); }
+body.mecanico-view .status-warning { display: none !important; }
+.actions { display: flex; gap: 10px; }
+body.mecanico-view .actions { display: none !important; }
+.actions button { flex: 1; padding: 12px; border: none; border-radius: 12px; font-size: 14px; font-weight: bold; color: white; cursor: pointer; }
+.actions button:first-child { background: #12a150; }
+.actions button:last-child { background: #d91c1c; }
+#addItemBtn { background: #001c4a; color: white; border: none; border-radius: 12px; padding: 12px 20px; font-size: 16px; font-weight: bold; cursor: pointer; }
+body.mecanico-view #addItemBtn { display: none !important; }
+.delete-item { position: absolute; top: 4px; right: 4px; width: 15px; height: 15px; border-radius: 50%; border: 1px solid #ff0000; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 9px; font-weight: bold; background: #ff0000; color: white; z-index: 99; line-height: 1; }
+body.mecanico-view .delete-item { display: none !important; }
 
         /* Botão exclusivo mecânico */
         .btn-mecanico-requisitar { width: 100%; padding: 14px; background: #00b140; color: white; font-size: 16px; font-weight: bold; border: none; border-radius: 12px; cursor: pointer; display: none; text-align: center; box-shadow: 0 4px 8px rgba(0,0,0,0.2); }
@@ -430,7 +445,8 @@
         </div>
         <div class="modal-buttons">
             <button class="btn-save" onclick="saveModalItem()">Salvar</button>
-            <button class="btn-cancel" onclick="closeItemModal()">Cancelar</button>
+            <!-- No seu HTML, dentro do justificativaModal -->
+<button class="btn-cancel" onclick="cancelarAlteracaoEstoque()">Cancelar</button>
         </div>
     </div>
 </div>
@@ -444,9 +460,9 @@
             <input type="text" id="reqItemName" readonly style="background: rgba(255,255,255,0.1); border-color: #555;">
         </div>
         <div class="modal-group">
-            <label>Número da Ordem de Serviço (OS)</label>
-            <input type="text" id="reqOS" placeholder="Ex: 10452">
-        </div>
+    <label>Número da Ordem de Serviço (OS)</label>
+    <input type="text" id="reqOS" placeholder="Ex: 10452" maxlength="11">
+	  </div>
         <div class="modal-group" style="position: relative;">
     <label>Nome do Mecânico / Requisitante</label>
     <input type="text" id="reqMecanico" placeholder="Digite para buscar..." onkeyup="filtrarMecanicosSugestao()" autocomplete="off">
@@ -494,6 +510,15 @@
                 <option value="Luiz Paulo Feitosa Santos">Luiz Paulo Feitosa Santos</option>
             </select>
         </div>
+
+    <div class="modal-group">
+            <label>Status</label>
+            <select id="mecStatus" style="width: 100%; padding: 8px; margin-top: 5px;">
+                <option value="Ativo">Ativo</option>
+                <option value="Inativo">Inativo</option>
+            </select>
+        </div>
+
         <div class="modal-buttons">
             <button class="btn-save" onclick="saveMecanico()">Salvar</button>
             <button class="btn-cancel" onclick="closeMecanicoModal()">Cancelar</button>
@@ -523,6 +548,31 @@
     </div>
 </div>
 
+<!-- Modal de Justificativa -->
+<div id="justificativaModal" class="modal-overlay">
+    <div class="modal-box">
+        <h3>Justificar Alteração de Estoque</h3>
+        <div class="modal-group">
+            <label>Motivo da Alteração</label>
+            <select id="selectMotivo">
+                <option value="Compra/Nota Fiscal">Compra/Nota Fiscal</option>
+                <option value="Devolução">Devolução</option>
+                <option value="Ajuste de Inventário">Ajuste de Inventário</option>
+                <option value="Outros">Outros</option>
+            </select>
+        </div>
+        <div class="modal-group">
+            <label>Observação Detalhada</label>
+            <textarea id="obsJustificativa" placeholder="Descreva o motivo..." style="background: #001c4a; color: white; padding: 10px; border-radius: 8px; border: 2px solid #2f7fff; width: 100%;"></textarea>
+        </div>
+        <div class="modal-buttons">
+            <button class="btn-save" onclick="confirmarAlteracaoEstoque()">Confirmar</button>
+            <!-- Botão corrigido abaixo -->
+            <button class="btn-cancel" onclick="cancelarAlteracaoEstoque()">Cancelar</button>
+        </div>
+    </div>
+</div>
+
 <script>
 let items = [];
 let historyList = [];
@@ -533,6 +583,8 @@ let initialized = false;
 let filteredList = [];
 let itemsDisplayedCount = 0;
 let historyDisplayedCount = 0;
+let timerJustificativa = null; 
+let bufferMudancas = {};
 let currentActiveTab = 'dashboard';
 const ITEMS_PER_PAGE = 30;
 
@@ -546,14 +598,15 @@ let lastFilteredLength = 0;
 function saveMecanico() {
     const nome = document.getElementById("mecName").value;
     const id = document.getElementById("mecId").value;
-    const supervisor = document.getElementById("mecSupervisor").value; 
+    const supervisor = document.getElementById("mecSupervisor").value;
+    const status = document.getElementById("mecStatus").value; // Captura o status selecionado
     
     if(!nome || !id) {
         alert("Por favor, preencha o Nome e o ID.");
         return;
     }
 
-    const novoMecanico = { nome, id, supervisor, status: "Ativo" };
+    const novoMecanico = { nome, id, supervisor, status }; // Inclui o status no objeto
     
     // Salva no Firebase na pasta 'mecanicos' usando o ID como chave
     window.fb.set(window.fb.ref(window.fb.db, 'mecanicos/' + id), novoMecanico)
@@ -580,7 +633,11 @@ function renderMecanicos() {
             <td style="color: #0f4fb8; font-weight: bold; text-decoration: underline;">${m.nome}</td>
             <td>${m.id}</td>
             <td>${m.supervisor}</td>
-            <td><span class="status-badge" style="color:#00b140;">${m.status}</span></td>
+            <td>
+                <span class="status-badge" style="color:${m.status === 'Ativo' ? '#00b140' : '#d91c1c'}; font-weight: bold;">
+                    ${m.status || 'Ativo'}
+                </span>
+            </td>
             <td>
                 <div style="display: flex; gap: 5px; justify-content: center;">
                     <button class="btn-table-approve" style="padding: 6px 10px;" onclick="event.stopPropagation(); abrirEdicaoMecanico('${m.id}')">✎</button>
@@ -660,6 +717,9 @@ function abrirEdicaoMecanico(id) {
     document.getElementById("mecId").value = mecanico.id;
     document.getElementById("mecId").readOnly = true; // Bloqueia o ID para não alterar a chave principal no Firebase
     document.getElementById("mecSupervisor").value = mecanico.supervisor;
+    
+    // Nova linha: Carrega o status salvo no Firebase para o campo select
+    document.getElementById("mecStatus").value = mecanico.status || "Ativo";
 
     // Ajusta o título do modal
     document.querySelector("#mecanicoModal h3").innerText = "Editar Mecânico";
@@ -1191,7 +1251,7 @@ function openHistoryDetailModal(log) {
         <div class="log-details-item" style="border-left-color: #ffcc00;"><span>🛠️ Ordem de Serviço (OS)</span><p>${log.os || 'Não Informado / Operação Interna'}</p></div>
         <div class="log-details-item" style="border-left-color: #ffcc00;"><span>👨‍🔧 Operador / Requisitante</span><p>${log.solicitante || 'Almoxarifado / Automático'}</p></div>
         <div class="log-details-item" style="border-left-color: #ffcc00;"><span>🏭 Linha do Setor</span><p>${log.linha || '---'}</p></div>
-        <div class="log-details-item" style="border-left-color: #ffcc00;"><span>📍 Destino / Local de Uso</span><p>${log.localAplicacao || 'Uso Geral / Sem Máquina Vinculada'}</p></div>
+        <div class="log-details-item" style="border-left-color: #ffcc00;"><span>📝 Observação da Justificativa</span><p>${log.localAplicacao || 'Nenhuma observação informada.'}</p></div>
         <div class="log-details-item" style="border-left-color: #00b140;"><span>🔑 Autorizado por (Almoxarifado)</span><p>${log.autorizadoPor || 'Operação Direta de Sistema'}</p></div>
     `;
 
@@ -1363,50 +1423,115 @@ function updateSingleCardUI(id) {
 }
 
 function changeQty(id, v) {   
-    const item = find(id); if(!item) return;
+    const item = find(id); 
+    if(!item) return;
     
-    if (!pendingUpdates[id]) {
-        pendingUpdates[id] = {
-            initialQty: item.qty,
-            currentQty: item.qty,
-            timeout: null
+    // Se não houver buffer, iniciamos registrando o valor original
+    if (!bufferMudancas[id]) {
+        bufferMudancas[id] = {
+            qtdInicial: item.qty,
+            qtdFinal: item.qty
         };
     }
 
-    item.qty += v; 
-    if(item.qty < 0) item.qty = 0;    
-    pendingUpdates[id].currentQty = item.qty;
+    // Apenas calculamos o novo valor dentro do buffer, sem tocar no item.qty original
+    let novaQtd = bufferMudancas[id].qtdFinal + v;
+    if(novaQtd < 0) novaQtd = 0;    
+    bufferMudancas[id].qtdFinal = novaQtd;
 
-    updateSingleCardUI(id);
-    preCalculatedTotalsAndCart();
+    // Atualizamos o visor (display) com o valor do buffer, mas o 'item' original continua com o valor antigo
+    const label = document.getElementById(`qty-val-${id}`);
+    if (label) label.innerText = novaQtd;
 
-    processPendingFirebaseUpdate(id, pendingUpdates[id].initialQty);
+    clearTimeout(timerJustificativa);
+    timerJustificativa = setTimeout(() => {
+        if (bufferMudancas[id].qtdFinal !== bufferMudancas[id].qtdInicial) {
+            pendingAction = { 
+                itemId: id, 
+                amount: Math.abs(bufferMudancas[id].qtdFinal - bufferMudancas[id].qtdInicial),
+                type: bufferMudancas[id].qtdFinal > bufferMudancas[id].qtdInicial ? 'Entrada' : 'Saída',
+                novaQuantidade: bufferMudancas[id].qtdFinal 
+            };
+            
+            document.getElementById('justificativaModal').style.display = 'flex';
+        }
+        delete bufferMudancas[id];
+    }, 1000); 
 }
 
 function addAmount(id){    
-    const amount = parseInt(prompt("Quantidade para adicionar:")); if(isNaN(amount)||amount<=0) return;    
-    const item = find(id); 
-    if(item) { 
-        item.qty += amount; 
-        updateSingleCardUI(id);
-        preCalculatedTotalsAndCart();
-        window.fb.update(window.fb.ref(window.fb.db, 'estoque/' + id), { qty: item.qty }).then(() => {
-            showToast();
-            logToHistory(id, "Entrada", amount, item.qty);
-        }); 
-    }
+    const amount = parseInt(prompt("Quantidade para adicionar:")); 
+    if(isNaN(amount)||amount<=0) return;    
+    pendingAction = { itemId: id, amount: amount, type: 'Entrada' };
+    document.getElementById('justificativaModal').style.display = 'flex';
 }
 
 function removeAmount(id){    
-    const amount = parseInt(prompt("Quantidade para retirar:")); if(isNaN(amount)||amount<=0) return;    
-    const item = find(id); if(!item) return;
-    item.qty -= amount; if(item.qty < 0) item.qty = 0;    
-    updateSingleCardUI(id);
-    preCalculatedTotalsAndCart();
-    window.fb.update(window.fb.ref(window.fb.db, 'estoque/' + id), { qty: item.qty }).then(() => {
-        showToast();
-        logToHistory(id, "Saída Geral", amount, item.qty);
+    const amount = parseInt(prompt("Quantidade para retirar:")); 
+    if(isNaN(amount)||amount<=0) return;    
+    pendingAction = { itemId: id, amount: amount, type: 'Saída' };
+    document.getElementById('justificativaModal').style.display = 'flex';
+}
+
+function confirmarAlteracaoEstoque() {
+    // Proteção: impede execução se não houver uma ação pendente válida
+    if (!pendingAction || !pendingAction.itemId) return;
+
+    const { itemId, amount, type, novaQuantidade } = pendingAction;
+    const item = find(itemId);
+    if (!item) return;
+
+    const motivo = document.getElementById('selectMotivo').value;
+    const obs = document.getElementById('obsJustificativa').value;
+
+    const qtdParaSalvar = (novaQuantidade !== undefined) ? novaQuantidade : 
+                          (type === 'Entrada' ? item.qty + amount : item.qty - amount);
+
+    window.fb.update(window.fb.ref(window.fb.db, 'estoque/' + itemId), { qty: qtdParaSalvar })
+    .then(() => {
+        item.qty = qtdParaSalvar; 
+        
+        //lastFilteredLength = 0; 
+        applyFilterAndSort();   
+        preCalculatedTotalsAndCart();
+        
+        logToHistory(itemId, `${type}: ${motivo}`, amount, qtdParaSalvar, "Almoxarifado", "---", obs);
+        
+        // Finalização com limpeza completa
+        finalizarAcao();
+        showToast("Sucesso!", "Estoque atualizado.");
+    })
+    .catch((error) => {
+        console.error("Erro ao atualizar estoque:", error);
+        // Opcional: Avisar o usuário que algo deu errado
+        alert("Erro ao salvar no banco de dados. Tente novamente.");
     });
+}
+
+// Função auxiliar para centralizar a limpeza
+function finalizarAcao() {
+    pendingAction = null; 
+    document.getElementById('justificativaModal').style.display = 'none';
+    document.getElementById('obsJustificativa').value = "";
+    document.getElementById('selectMotivo').selectedIndex = 0; // Volta para o primeiro item (opcional)
+}
+
+function cancelarAlteracaoEstoque() {
+    // 1. Limpa o buffer de mudanças pendentes para este item específico
+    if (pendingAction && pendingAction.itemId) {
+        delete bufferMudancas[pendingAction.itemId];
+    }
+    
+    // 2. Força a atualização da lista e a re-renderização dos cards
+    // Isso garante que o DOM volte a exibir o valor real armazenado no array 'items'
+    //lastFilteredLength = 0; 
+    applyFilterAndSort();   
+    
+    // 3. Utiliza a função unificada para limpar o estado e o modal
+    // (Garante que pendingAction, textarea e select sejam resetados)
+    finalizarAcao();
+    
+    console.log("Cancelamento efetuado: Grid e interface sincronizados com o estoque real.");
 }
 
 function logToHistory(itemId, type, delta, finalQty, solicitanteName = "", osNum = "", localApp = "", autorizadoPor = "") {
@@ -1654,6 +1779,9 @@ function formatarTextoCapitalizado(input) {
     let valor = input.value.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     input.value = valor.toLowerCase().replace(/(?:^|\s)\S/g, (char) => char.toUpperCase());
 }
+
+
+
 </script>
 </body>
 </html>
