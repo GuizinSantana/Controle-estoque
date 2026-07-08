@@ -470,8 +470,9 @@ body.mecanico-view .delete-item { display: none !important; }
         </div>
         <div class="modal-buttons">
             <button class="btn-save" onclick="saveModalItem()">Salvar</button>
+		
             <!-- No seu HTML, dentro do justificativaModal -->
-<button class="btn-cancel" onclick="cancelarAlteracaoEstoque()">Cancelar</button>
+<button class="btn-cancel" onclick="closeItemModal()">Cancelar</button>
         </div>
     </div>
 </div>
@@ -1579,23 +1580,27 @@ function finalizarAcao() {
     document.getElementById('selectMotivo').selectedIndex = 0; // Volta para o primeiro item (opcional)
 }
 
-function cancelarAlteracaoEstoque() {
+window.cancelarAlteracaoEstoque = function() {
     // 1. Limpa o buffer de mudanças pendentes para este item específico
-    if (pendingAction && pendingAction.itemId) {
-        delete bufferMudancas[pendingAction.itemId];
+    // Usamos typeof para evitar o erro "ReferenceError: pendingAction is not defined"
+    if (typeof pendingAction !== 'undefined' && pendingAction && pendingAction.itemId) {
+        if (typeof bufferMudancas !== 'undefined') {
+            delete bufferMudancas[pendingAction.itemId];
+        }
     }
     
     // 2. Força a atualização da lista e a re-renderização dos cards
-    // Isso garante que o DOM volte a exibir o valor real armazenado no array 'items'
-    //lastFilteredLength = 0; 
-    applyFilterAndSort();   
+    if (typeof applyFilterAndSort === 'function') {
+        applyFilterAndSort();   
+    }
     
     // 3. Utiliza a função unificada para limpar o estado e o modal
-    // (Garante que pendingAction, textarea e select sejam resetados)
-    finalizarAcao();
+    if (typeof finalizarAcao === 'function') {
+        finalizarAcao();
+    }
     
     console.log("Cancelamento efetuado: Grid e interface sincronizados com o estoque real.");
-}
+};
 
 function logToHistory(itemId, type, delta, finalQty, solicitanteName = "", osNum = "", localApp = "", autorizadoPor = "") {
     // Sobrecarga para aceitar o parâmetro 'linha' na assinatura expandida
@@ -1680,7 +1685,9 @@ function openRenameModal(id) {
     document.getElementById("itemModal").style.display = "flex";
 }
 
-function closeItemModal() { document.getElementById("itemModal").style.display = "none"; }
+window.closeItemModal = function() { 
+    document.getElementById("itemModal").style.display = "none"; 
+};
 
 function saveModalItem() {
     const id = document.getElementById("modalItemId").value;
@@ -1741,6 +1748,7 @@ function updateData(newItemsArray) {
     preCalculatedTotalsAndCart();
     applyFilterAndSort();
 }
+
 
 function init() {
     if (initialized) return;
