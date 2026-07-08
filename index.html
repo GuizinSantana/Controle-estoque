@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -980,21 +981,59 @@ function applyFilterAndSort() {
         return true;
     });
 
-    if (getUserRole() !== "user") {
-        if (sort === "nameAsc") filteredList.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
-        else if (sort === "nameDesc") filteredList.sort((a, b) => b.name.localeCompare(a.name, undefined, { numeric: true }));
-        else if (sort === "locationAsc") {
-            filteredList.sort((a, b) => {
-                const locA = (a.location || "").trim(); const locB = (b.location || "").trim();
-                if (!locA && locB) return 1; if (locA && !locB) return -1;
-                return locA.localeCompare(locB, undefined, { numeric: true });
-            });
-        }
-        else if (sort === "qtyAsc") filteredList.sort((a, b) => a.qty - b.qty);
-        else if (sort === "qtyDesc") filteredList.sort((a, b) => b.qty - a.qty);
-    } else {
-        filteredList.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+   if (getUserRole() !== "user") {
+    if (sort === "nameAsc") {
+        filteredList.sort((a, b) => {
+            const nameA = (a.name || "").trim();
+            const nameB = (b.name || "").trim();
+            const aIsAlpha = /^[a-zA-Z]/.test(nameA);
+            const bIsAlpha = /^[a-zA-Z]/.test(nameB);
+
+            if (aIsAlpha && !bIsAlpha) return -1;
+            if (!aIsAlpha && bIsAlpha) return 1;
+            return nameA.localeCompare(nameB, undefined, { numeric: true });
+        });
+    } 
+    else if (sort === "nameDesc") {
+        filteredList.sort((a, b) => {
+            const nameA = (a.name || "").trim();
+            const nameB = (b.name || "").trim();
+            const aIsAlpha = /^[a-zA-Z]/.test(nameA);
+            const bIsAlpha = /^[a-zA-Z]/.test(nameB);
+
+            if (aIsAlpha && !bIsAlpha) return -1;
+            if (!aIsAlpha && bIsAlpha) return 1;
+            return nameB.localeCompare(nameA, undefined, { numeric: true });
+        });
+    } 
+    else if (sort === "locationAsc") {
+        filteredList.sort((a, b) => {
+            const locA = (a.location || "").trim(); 
+            const locB = (b.location || "").trim();
+            if (!locA && locB) return 1; 
+            if (locA && !locB) return -1;
+            return locA.localeCompare(locB, undefined, { numeric: true });
+        });
+    } 
+    else if (sort === "qtyAsc") {
+        filteredList.sort((a, b) => a.qty - b.qty);
+    } 
+    else if (sort === "qtyDesc") {
+        filteredList.sort((a, b) => b.qty - a.qty);
     }
+} else {
+    // Ordenação padrão para usuários comuns
+    filteredList.sort((a, b) => {
+        const nameA = (a.name || "").trim();
+        const nameB = (b.name || "").trim();
+        const aIsAlpha = /^[a-zA-Z]/.test(nameA);
+        const bIsAlpha = /^[a-zA-Z]/.test(nameB);
+
+        if (aIsAlpha && !bIsAlpha) return -1;
+        if (!aIsAlpha && bIsAlpha) return 1;
+        return nameA.localeCompare(nameB, undefined, { numeric: true });
+    });
+}
 
     const totalItemsEl = document.getElementById("totalItems");
     if (totalItemsEl) totalItemsEl.innerText = filteredList.length;
