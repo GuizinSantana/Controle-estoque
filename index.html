@@ -212,6 +212,33 @@ body.mecanico-view .delete-item { display: none !important; }
     background-color: #0f4fb8;
 }
         }
+
+       .item-name { 
+    font-weight: bold; 
+    font-size: 19px; 
+    color: white; 
+    line-height: 1.2; 
+    padding-right: 10px;
+    
+    /* Regras para limitar em 2 linhas */
+    display: -webkit-box;
+    -webkit-line-clamp: 2; /* Limita a 2 linhas */
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    
+    /* Transição suave para o efeito de expansão (opcional) */
+    transition: all 0.3s ease;
+    cursor: default;
+}
+
+/* Efeito ao passar o mouse */
+.item-name:hover {
+    -webkit-line-clamp: unset; /* Remove a limitação de linhas */
+    background: rgba(0,0,0,0.2); /* Opcional: destaque leve no fundo */
+    position: relative;
+    z-index: 10; /* Garante que fique por cima de outros elementos */
+}
     </style>
 </head>
 <body>
