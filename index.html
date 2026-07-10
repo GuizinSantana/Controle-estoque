@@ -63,6 +63,23 @@
             if (loginScreen) loginScreen.style.display = "none";
             init();
         }
+
+
+	  document.addEventListener("keydown", (e) => {    
+    const loginScreen = document.getElementById("loginScreen");
+    if(e.key === "Enter" && loginScreen && loginScreen.style.display !== "none") {
+        window.checkPassword(); // Agora ele chama a versão global
+    }
+});
+
+// 2. A função de formatar texto (pode ficar aqui também)
+window.formatarTextoCapitalizado = function(input) {
+    if (!input.value) return;
+    let valor = input.value.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    input.value = valor.toLowerCase().replace(/(?:^|\s)\S/g, (char) => char.toUpperCase());
+};
+
+
     </script>
 
     <style>
@@ -1853,17 +1870,6 @@ function init() {
     if(sCartEl) sCartEl.addEventListener("input", preCalculatedTotalsAndCart);
 }
 
-document.addEventListener("keydown",(e)=>{    
-    const loginScreen = document.getElementById("loginScreen");
-    if(e.key === "Enter" && loginScreen && loginScreen.style.display !== "none") checkPassword();
-});
-
-// Função para formatar nomes automaticamente
-function formatarTextoCapitalizado(input) {
-    if (!input.value) return;
-    let valor = input.value.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    input.value = valor.toLowerCase().replace(/(?:^|\s)\S/g, (char) => char.toUpperCase());
-}
 
 
 
