@@ -24,6 +24,36 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 	  const auth = getAuth(app);
+
+	  window.checkPassword = async function() {
+    const passDigitada = document.getElementById("passwordInput").value;
+    const tentativas = [
+        { email: "almoxarifado@estoque.com", perfil: "admin" },
+        { email: "mecanico@empresa.com", perfil: "user" }
+    ];
+
+    let sucesso = false;
+
+    for (let t of tentativas) {
+        try {
+            await signInWithEmailAndPassword(auth, t.email, passDigitada);
+            sessionStorage.setItem("bimboRole", t.perfil);
+            document.getElementById("loginScreen").style.display = "none";
+            
+            applyViewModeRules(); // Chama a função logo após logar
+            
+            if(typeof init !== 'undefined' && !initialized) { init(); }
+            sucesso = true;
+            break;
+        } catch (e) {
+            console.log("Tentativa com " + t.email + " falhou.");
+        }
+    }
+
+    if (!sucesso) {
+        document.getElementById("errorMsg").innerText = "Senha incorreta!";
+    }
+};
         
         window.fb = { db, ref, set, update, remove, push, query, orderByKey, limitToLast, onValue };
 
@@ -772,7 +802,7 @@ function closeMecanicoModal() {
 }
 
 function getUserRole() {
-    return sessionStorage.getItem("bimboRole") || "user";
+    return sessionStorage.getItem("bimboRole");
 }
 
 function showToast() {
@@ -790,36 +820,9 @@ function showToast() {
 // Certifique-se de que o auth foi inicializado logo abaixo dos seus imports
 const auth = getAuth(); 
 
-async function checkPassword() {
-    const passDigitada = document.getElementById("passwordInput").value;
-    const tentativas = [
-        { email: "almoxarifado@estoque.com", perfil: "admin" },
-        { email: "mecanico@empresa.com", perfil: "user" }
-    ];
-
-    let sucesso = false;
-
-    for (let t of tentativas) {
-        try {
-            await signInWithEmailAndPassword(auth, t.email, passDigitada);
-            sessionStorage.setItem("bimboRole", t.perfil);
-            document.getElementById("loginScreen").style.display = "none";
-            applyViewModeRules();
-            if(!initialized){ init(); }
-            sucesso = true;
-            break;
-        } catch (e) {
-            console.log("Tentativa com " + t.email + " falhou.");
-        }
-    }
-
-    if (!sucesso) {
-        document.getElementById("errorMsg").innerText = "Senha incorreta!";
-    }
-}
 
 function applyViewModeRules() {
-    const role = getUserRole();
+    const role = getUserRole(); // Agora ela lê do sessionStorage
     const btnMecanicos = document.getElementById("nav-mecanicos");
     
     if(role === "user") {
@@ -827,7 +830,6 @@ function applyViewModeRules() {
         document.getElementById("dashTitleMain").innerText = "Painel de Requisições";
         document.getElementById("dashTitleSub").innerText = "Solicitação Exclusiva de Insumos - Mecânica";
         
-        // Esconde o botão de mecânicos para usuários comuns
         if(btnMecanicos) btnMecanicos.style.display = "none";
         
         const sortEl = document.getElementById("sort");
@@ -836,7 +838,6 @@ function applyViewModeRules() {
         if(filterEl) filterEl.value = "positive"; 
     } else {
         document.body.classList.remove("mecanico-view");
-        // Mostra o botão de mecânicos para o Admin
         if(btnMecanicos) btnMecanicos.style.display = "flex";
     }
 }
