@@ -1,5 +1,6 @@
 
 
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -79,6 +80,96 @@ window.formatarTextoCapitalizado = function(input) {
     input.value = valor.toLowerCase().replace(/(?:^|\s)\S/g, (char) => char.toUpperCase());
 };
 
+window.addEventListener("scroll", () => {
+    if (scrollTimeout) return;
+    scrollTimeout = setTimeout(() => {
+        scrollTimeout = null;
+        if ((window.innerHeight + window.scrollY) >= document.documentElement.scrollHeight - 150) {
+            if (currentActiveTab === 'dashboard') {
+                loadMoreItems();
+            } else if (currentActiveTab === 'history') {
+                loadMoreHistory();
+            }
+        }
+    }, 60);
+});
+
+
+	window.closeItemModal = function() { 
+    document.getElementById("itemModal").style.display = "none"; 
+};
+
+	window.cancelarAlteracaoEstoque = function() {
+    // 1. Limpa o buffer de mudanças pendentes para este item específico
+    // Usamos typeof para evitar o erro "ReferenceError: pendingAction is not defined"
+    if (typeof pendingAction !== 'undefined' && pendingAction && pendingAction.itemId) {
+        if (typeof bufferMudancas !== 'undefined') {
+            delete bufferMudancas[pendingAction.itemId];
+        }
+    }
+    
+    // 2. Força a atualização da lista e a re-renderização dos cards
+    if (typeof applyFilterAndSort === 'function') {
+        applyFilterAndSort();   
+    }
+    
+    // 3. Utiliza a função unificada para limpar o estado e o modal
+    if (typeof finalizarAcao === 'function') {
+        finalizarAcao();
+    }
+    
+    console.log("Cancelamento efetuado: Grid e interface sincronizados com o estoque real.");
+};
+
+	window.saveModalItem = function() {
+    const id = document.getElementById("modalItemId").value;
+    const name = document.getElementById("modalName").value.trim();
+    const minQty = parseInt(document.getElementById("modalMinQty").value) || 0;
+    
+    if(!name) { 
+        alert("O nome do item é obrigatório!"); 
+        return; 
+    }
+
+    const itemId = id ? parseInt(id) : Date.now();
+    let currentQty = 0;
+    let isEdit = false;
+    
+    if(id) { 
+        const existingItem = find(id); 
+        if(existingItem) { 
+            currentQty = existingItem.qty; 
+            isEdit = true; 
+        } 
+    }
+
+    const itemData = {
+        id: itemId, 
+        name: name,
+        brand: document.getElementById("modalBrand").value.trim(),
+        model: document.getElementById("modalModel").value.trim(),
+        supplier: document.getElementById("modalSupplier").value.trim(),
+        contact: document.getElementById("modalContact").value.trim(),
+        location: document.getElementById("modalLocation").value.trim(),
+        minQty: minQty, 
+        qty: currentQty 
+    };
+
+    window.fb.update(window.fb.ref(window.fb.db, 'estoque/' + itemId), itemData)
+    .then(() => {
+        // Agora, ao salvar, o modal fechará garantidamente
+        closeItemModal(); 
+        showToast();
+        if (!isEdit) { lastFilteredLength = 0; }
+        logToHistory(itemId, isEdit ? "Ajuste Cadastro" : "Item Criado", 0, currentQty);
+    })
+    .catch((error) => {
+        console.error("Erro ao salvar:", error);
+        alert("Ocorreu um erro ao salvar. Verifique sua conexão.");
+        // Fecha o modal mesmo com erro para não travar a tela
+        closeItemModal();
+    });
+};
 
     </script>
 
@@ -1388,19 +1479,7 @@ function closeStatsModal() {
     document.getElementById("mecanicoStatsModal").style.display = "none";
 }
 
-window.addEventListener("scroll", () => {
-    if (scrollTimeout) return;
-    scrollTimeout = setTimeout(() => {
-        scrollTimeout = null;
-        if ((window.innerHeight + window.scrollY) >= document.documentElement.scrollHeight - 150) {
-            if (currentActiveTab === 'dashboard') {
-                loadMoreItems();
-            } else if (currentActiveTab === 'history') {
-                loadMoreHistory();
-            }
-        }
-    }, 60);
-});
+
 
 function triggerSemiAutoPurchase(id) {
     const item = find(id);
@@ -1611,27 +1690,6 @@ function finalizarAcao() {
     document.getElementById('selectMotivo').selectedIndex = 0; // Volta para o primeiro item (opcional)
 }
 
-window.cancelarAlteracaoEstoque = function() {
-    // 1. Limpa o buffer de mudanças pendentes para este item específico
-    // Usamos typeof para evitar o erro "ReferenceError: pendingAction is not defined"
-    if (typeof pendingAction !== 'undefined' && pendingAction && pendingAction.itemId) {
-        if (typeof bufferMudancas !== 'undefined') {
-            delete bufferMudancas[pendingAction.itemId];
-        }
-    }
-    
-    // 2. Força a atualização da lista e a re-renderização dos cards
-    if (typeof applyFilterAndSort === 'function') {
-        applyFilterAndSort();   
-    }
-    
-    // 3. Utiliza a função unificada para limpar o estado e o modal
-    if (typeof finalizarAcao === 'function') {
-        finalizarAcao();
-    }
-    
-    console.log("Cancelamento efetuado: Grid e interface sincronizados com o estoque real.");
-};
 
 function logToHistory(itemId, type, delta, finalQty, solicitanteName = "", osNum = "", localApp = "", autorizadoPor = "") {
     // Sobrecarga para aceitar o parâmetro 'linha' na assinatura expandida
@@ -1716,38 +1774,9 @@ function openRenameModal(id) {
     document.getElementById("itemModal").style.display = "flex";
 }
 
-window.closeItemModal = function() { 
-    document.getElementById("itemModal").style.display = "none"; 
-};
 
-function saveModalItem() {
-    const id = document.getElementById("modalItemId").value;
-    const name = document.getElementById("modalName").value.trim();
-    const minQty = parseInt(document.getElementById("modalMinQty").value) || 0;
-    if(!name) { alert("O nome do item é obrigatório!"); return; }
 
-    const itemId = id ? parseInt(id) : Date.now();
-    let currentQty = 0;
-    let isEdit = false;
-    if(id) { const existingItem = find(id); if(existingItem) { currentQty = existingItem.qty; isEdit = true; } }
 
-    const itemData = {
-        id: itemId, name: name,
-        brand: document.getElementById("modalBrand").value.trim(),
-        model: document.getElementById("modalModel").value.trim(),
-        supplier: document.getElementById("modalSupplier").value.trim(),
-        contact: document.getElementById("modalContact").value.trim(),
-        location: document.getElementById("modalLocation").value.trim(),
-        minQty: minQty, qty: currentQty 
-    };
-
-    window.fb.update(window.fb.ref(window.fb.db, 'estoque/' + itemId), itemData).then(() => {
-        closeItemModal();
-        showToast();
-        if (!isEdit) { lastFilteredLength = 0; }
-        logToHistory(itemId, isEdit ? "Ajuste Cadastro" : "Item Criado", 0, currentQty);
-    });
-}
 
 function deleteItem(id){    
     const item = find(id); if(!item) return;
