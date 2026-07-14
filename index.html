@@ -1,6 +1,1982 @@
 
 
 
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle de Estoque Avançado - Bimbo</title>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+        import { getDatabase, ref, onValue, set, update, remove, push, query, orderByKey, limitToLast } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
+	  import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
+        const firebaseConfig = {
+            apiKey: "AIzaSyDTiGHVdsmXwoEFIhOxxSVle1Mz4LAFsTE",
+            authDomain: "controle-de-estoque-avan-fc46a.firebaseapp.com",
+            databaseURL: "https://controle-de-estoque-avan-fc46a-default-rtdb.firebaseio.com",
+            projectId: "controle-de-estoque-avan-fc46a",
+            storageBucket: "controle-de-estoque-avan-fc46a.firebasestorage.app",
+            messagingSenderId: "773817161524",
+            appId: "1:773817161524:web:d7ac6bceeda7daea54f761"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+	  const auth = getAuth(app);
+	  const searchHistoryInput = document.getElementById("searchHistory");
+
+	  window.checkPassword = async function() {
+    const passDigitada = document.getElementById("passwordInput").value;
+    const tentativas = [
+        { email: "almoxarifado@estoque.com", perfil: "admin" },
+        { email: "mecanico@empresa.com", perfil: "user" }
+    ];
+
+    let sucesso = false;
+
+    for (let t of tentativas) {
+        try {
+            await signInWithEmailAndPassword(auth, t.email, passDigitada);
+            sessionStorage.setItem("bimboRole", t.perfil);
+            document.getElementById("loginScreen").style.display = "none";
+            
+            applyViewModeRules(); // Chama a função logo após logar
+            
+            if(typeof init !== 'undefined' && !initialized) { init(); }
+            sucesso = true;
+            break;
+        } catch (e) {
+            console.log("Tentativa com " + t.email + " falhou.");
+        }
+    }
+
+    if (!sucesso) {
+        document.getElementById("errorMsg").innerText = "Senha incorreta!";
+    }
+};
+        
+        window.fb = { db, ref, set, update, remove, push, query, orderByKey, limitToLast, onValue };
+
+        const loggedRole = sessionStorage.getItem("bimboRole");
+        if (loggedRole) {
+            const loginScreen = document.getElementById("loginScreen");
+            if (loginScreen) loginScreen.style.display = "none";
+            init();
+        }
+
+
+	  document.addEventListener("keydown", (e) => {    
+    const loginScreen = document.getElementById("loginScreen");
+    if(e.key === "Enter" && loginScreen && loginScreen.style.display !== "none") {
+        window.checkPassword(); // Agora ele chama a versão global
+    }
+});
+
+// 2. A função de formatar texto (pode ficar aqui também)
+window.formatarTextoCapitalizado = function(input) {
+    if (!input.value) return;
+    let valor = input.value.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    input.value = valor.toLowerCase().replace(/(?:^|\s)\S/g, (char) => char.toUpperCase());
+};
+
+window.addEventListener("scroll", () => {
+    if (scrollTimeout) return;
+    scrollTimeout = setTimeout(() => {
+        scrollTimeout = null;
+        if ((window.innerHeight + window.scrollY) >= document.documentElement.scrollHeight - 150) {
+            if (currentActiveTab === 'dashboard') {
+                loadMoreItems();
+            } else if (currentActiveTab === 'history') {
+                loadMoreHistory();
+            }
+        }
+    }, 60);
+});
+
+
+	window.closeItemModal = function() { 
+    document.getElementById("itemModal").style.display = "none"; 
+};
+
+	window.cancelarAlteracaoEstoque = function() {
+    // 1. Limpa o buffer de mudanças pendentes para este item específico
+    // Usamos typeof para evitar o erro "ReferenceError: pendingAction is not defined"
+    if (typeof pendingAction !== 'undefined' && pendingAction && pendingAction.itemId) {
+        if (typeof bufferMudancas !== 'undefined') {
+            delete bufferMudancas[pendingAction.itemId];
+        }
+    }
+    
+    // 2. Força a atualização da lista e a re-renderização dos cards
+    if (typeof applyFilterAndSort === 'function') {
+        applyFilterAndSort();   
+    }
+    
+    // 3. Utiliza a função unificada para limpar o estado e o modal
+    if (typeof finalizarAcao === 'function') {
+        finalizarAcao();
+    }
+    
+    console.log("Cancelamento efetuado: Grid e interface sincronizados com o estoque real.");
+};
+
+	window.saveModalItem = function() {
+    const id = document.getElementById("modalItemId").value;
+    const name = document.getElementById("modalName").value.trim();
+    const minQty = parseInt(document.getElementById("modalMinQty").value) || 0;
+    
+    if(!name) { 
+        alert("O nome do item é obrigatório!"); 
+        return; 
+    }
+
+    const itemId = id ? parseInt(id) : Date.now();
+    let currentQty = 0;
+    let isEdit = false;
+    
+    if(id) { 
+        const existingItem = find(id); 
+        if(existingItem) { 
+            currentQty = existingItem.qty; 
+            isEdit = true; 
+        } 
+    }
+
+    const itemData = {
+        id: itemId, 
+        name: name,
+        brand: document.getElementById("modalBrand").value.trim(),
+        model: document.getElementById("modalModel").value.trim(),
+        supplier: document.getElementById("modalSupplier").value.trim(),
+        contact: document.getElementById("modalContact").value.trim(),
+        location: document.getElementById("modalLocation").value.trim(),
+        minQty: minQty, 
+        qty: currentQty 
+    };
+
+    window.fb.update(window.fb.ref(window.fb.db, 'estoque/' + itemId), itemData)
+    .then(() => {
+        // Agora, ao salvar, o modal fechará garantidamente
+        closeItemModal(); 
+        showToast();
+        if (!isEdit) { lastFilteredLength = 0; }
+        logToHistory(itemId, isEdit ? "Ajuste Cadastro" : "Item Criado", 0, currentQty);
+    })
+    .catch((error) => {
+        console.error("Erro ao salvar:", error);
+        alert("Ocorreu um erro ao salvar. Verifique sua conexão.");
+        // Fecha o modal mesmo com erro para não travar a tela
+        closeItemModal();
+    });
+};
+
+window.filterHistory = function() {
+    const searchTerm = searchHistoryInput.value.toLowerCase();
+    const rows = document.querySelectorAll("#historyContainer tr");
+
+    rows.forEach(row => {
+        // Pega todo o texto da linha e converte para minúsculo
+        const rowText = row.innerText.toLowerCase();
+        
+        // Se o termo de busca estiver contido no texto da linha, exibe; senão, esconde
+        if (rowText.includes(searchTerm)) {
+            row.style.display = "";
+        } else {
+            row.style.display = "none";
+        }
+    });
+}
+
+// Adiciona o evento de digitação (input) para filtrar em tempo real
+if (searchHistoryInput) {
+    searchHistoryInput.addEventListener("input", filterHistory);
+}
+
+    </script>
+
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
+        body { background: #e9eef7; display: flex; min-height: 100vh; overflow-x: hidden; }
+
+        /* ================= LOGIN ================= */
+        #loginScreen { position: fixed; inset: 0; background: #0037b3; background-image: url("login-bimbo.png"); background-size: cover; background-position: center; background-repeat: no-repeat; z-index: 99999; }
+        #passwordArea { position: absolute; left: 50%; top: 50%; transform: translate(-50%, 80px); width: min(820px, 85vw); }
+        #passwordInput { width: 100%; height: 92px; background: rgba(0,0,0,.12); border: 2px solid rgba(255,255,255,.45); border-radius: 18px; outline: none; color: white; font-size: 34px; padding-left: 35px; }
+        #loginBtn { width: 100%; height: 90px; margin-top: 28px; border: none; border-radius: 18px; background: #e4001b; color: white; font-size: 38px; font-weight: bold; cursor: pointer; }
+        #errorMsg { margin-top: 18px; text-align: center; color: #ffd2d2; font-size: 22px; font-weight: bold; }
+
+        /* ================= BARRA LATERAL ================= */
+        .sidebar { width: 70px; background: #001c4a; color: white; display: flex; flex-direction: column; padding: 20px 0; position: fixed; top: 0; bottom: 0; left: 0; z-index: 1001; transition: width 0.23s cubic-bezier(0.4, 0, 0.2, 1); overflow-x: hidden; overflow-y: auto; white-space: nowrap; box-shadow: 4px 0 10px rgba(0,0,0,0.2); contain: padding; transform: translateZ(0); will-change: width; }
+        body.mecanico-view .sidebar { display: none !important; }
+        .sidebar:hover, .sidebar.expanded { width: 260px; }
+        .sidebar-brand { padding: 0 0 15px 0; border-bottom: 1px solid rgba(255,255,255,0.1); text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 110px; }
+        .sidebar-brand img { width: 45px; height: auto; transition: width 0.23s ease; display: block; }
+        .sidebar:hover .sidebar-brand img, .sidebar.expanded .sidebar-brand img { width: 75px; }
+        .sidebar-brand h3 { font-size: 15px; color: #7fb2ff; font-weight: normal; margin-top: 8px; opacity: 0; transition: opacity 0.15s; }
+        .sidebar:hover .sidebar-brand h3, .sidebar.expanded .sidebar-brand h3 { opacity: 1; }
+        .sidebar-menu { display: flex; flex-direction: column; gap: 8px; margin-top: 15px; padding: 0 8px; }
+        .menu-btn { display: flex; align-items: center; padding: 14px 12px; color: #a4c2f4; background: transparent; border: none; border-radius: 10px; cursor: pointer; font-size: 16px; font-weight: bold; text-align: left; transition: background 0.2s, color 0.2s; width: 100%; position: relative; }
+        .menu-btn .icon { font-size: 20px; min-width: 32px; text-align: center; display: inline-block; }
+        .menu-btn .btn-text { opacity: 0; transition: opacity 0.15s; margin-left: 5px; display: inline-block; pointer-events: none; }
+        .sidebar:hover .menu-btn .btn-text, .sidebar.expanded .menu-btn .btn-text { opacity: 1; }
+        .menu-btn:hover, .menu-btn.active { background: #0f4fb8; color: white; }
+        .menu-btn span.badge { background: #e4001b; color: white; font-size: 11px; padding: 2px 6px; border-radius: 10px; position: absolute; right: 12px; top: 50%; transform: translateY(-50%); }
+        .sidebar:not(:hover):not(.expanded) .menu-btn span.badge { right: 6px; top: 6px; transform: none; font-size: 9px; padding: 1px 4px; }
+
+        /* ================= CONTEÚDO PRINCIPAL ================= */
+        .main-content { margin-left: 70px; flex: 1; padding: 25px; max-width: calc(100% - 70px); transition: margin-left 0.23s cubic-bezier(0.4, 0, 0.2, 1); }
+        body.mecanico-view .main-content { margin-left: 0 !important; max-width: 100% !important; }
+        .sidebar:hover ~ .main-content, .sidebar.expanded ~ .main-content { margin-left: 260px; max-width: calc(100% - 260px); }
+        .app-section { display: none; }
+        .app-section.active { display: block; }
+
+        /* ================= GRIDS E COMPONENTES ================= */
+        .header { display: flex; align-items: center; justify-content: space-between; position: relative; margin-bottom: 25px; border-bottom: 2px solid #002b73; padding-bottom: 15px; }
+        .title-container h1 { color: #002b73; font-size: 30px; margin: 0; }
+        .title-container h2 { font-size: 14px; color: #3b5ea8; margin-top: 4px; font-weight: normal; }
+        
+        .sticky-controls-wrapper { position: sticky; top: 0; z-index: 1000; background: #e9eef7; padding-top: 5px; padding-bottom: 15px; }
+        
+        .top-bar { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; }
+        .top-bar input, .top-bar select { padding: 12px; border: 2px solid #0f4fb8; border-radius: 12px; font-size: 16px; background: white; color: #001c4a; font-weight: bold; }
+        .top-bar input { flex: 1; }
+        
+        .summary-bar { display: flex; flex-wrap: wrap; gap: 15px; background: #002b73; padding: 12px 20px; border-radius: 12px; color: white; font-weight: bold; font-size: 16px; box-shadow: 0 2px 8px rgba(0,0,0,.15); align-items: center; justify-content: space-between; }
+        body.mecanico-view .summary-bar { display: none !important; }
+        .summary-left { display: flex; flex-wrap: wrap; gap: 15px; align-items: center; }
+        .summary-item { display: flex; align-items: center; gap: 8px; }
+        .summary-value { background: #e4001b; padding: 4px 10px; border-radius: 8px; font-size: 15px; }
+        
+        .summary-status-container { display: flex; gap: 12px; margin-left: auto; }
+        .status-badge { font-size: 14px; background: rgba(255,255,255,0.1); padding: 4px 10px; border-radius: 8px; font-weight: bold; }
+
+        /* ================= CONTAINER E CARD DOS ITENS ================= */
+       /* --- CONTAINER: Regras corrigidas --- */
+#container { 
+    display: grid; 
+    grid-template-columns: repeat(4, 1fr); /* 4 colunas padrão */
+    gap: 16px; 
+    margin-top: 15px; 
+    transition: grid-template-columns 0.3s ease; /* Efeito suave ao mudar */
+}
+
+/* Quando a barra lateral estiver com a classe 'expanded' (3 colunas) */
+.sidebar.expanded ~ .main-content #container { 
+    grid-template-columns: repeat(3, 1fr); 
+}
+
+/* --- DEMAIS ESTILOS --- */
+.card { position: relative; background: linear-gradient(180deg,#0f4fb8,#002b73); border-radius: 18px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,.22); display: flex; flex-direction: column; justify-content: space-between; contain: content; }
+.card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; min-height: 48px; }
+.item-name { font-weight: bold; font-size: 19px; color: white; line-height: 1.2; padding-right: 10px; }
+.gear { cursor: pointer; font-size: 22px; color: white; line-height: 1; }
+body.mecanico-view .gear { display: none !important; }
+.item-details { background: rgba(0, 28, 74, 0.6); border-radius: 10px; padding: 10px; margin-bottom: 14px; font-size: 13px; display: flex; flex-direction: column; gap: 6px; }
+.item-details p { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 4px; }
+.item-details p:last-child { border: none; padding: 0; }
+.item-details span { font-weight: bold; color: #7fb2ff; min-width: 85px; }
+.card-text-value { color: white; font-size: 13px; text-align: right; word-break: break-all; padding-left: 10px; display: inline-block; }
+
+.counter { display: flex; justify-content: center; align-items: center; gap: 15px; margin-bottom: 10px; }
+body.mecanico-view .counter { display: none !important; }
+.counter button { width: 46px; height: 46px; font-size: 24px; font-weight: bold; color: white; border: none; border-radius: 12px; cursor: pointer; }
+.counter button:first-child { background: #d91c1c; }
+.counter button:last-child { background: #00b140; }
+.value { font-size: 28px; font-weight: bold; min-width: 80px; text-align: center; background: #001c4a; color: white; padding: 8px 12px; border-radius: 12px; }
+body.mecanico-view .mecanico-qty-display { display: block !important; text-align: center; margin-bottom: 15px; color: white; font-size: 16px; background: #001c4a; padding: 8px; border-radius: 10px; font-weight: bold; }
+
+.status-warning { text-align: center; font-weight: bold; font-size: 14px; margin-bottom: 14px; padding: 6px; border-radius: 8px; background: rgba(0, 0, 0, 0.2); }
+body.mecanico-view .status-warning { display: none !important; }
+.actions { display: flex; gap: 10px; }
+body.mecanico-view .actions { display: none !important; }
+.actions button { flex: 1; padding: 12px; border: none; border-radius: 12px; font-size: 14px; font-weight: bold; color: white; cursor: pointer; }
+.actions button:first-child { background: #12a150; }
+.actions button:last-child { background: #d91c1c; }
+#addItemBtn { background: #001c4a; color: white; border: none; border-radius: 12px; padding: 12px 20px; font-size: 16px; font-weight: bold; cursor: pointer; }
+body.mecanico-view #addItemBtn { display: none !important; }
+.delete-item { position: absolute; top: 4px; right: 4px; width: 15px; height: 15px; border-radius: 50%; border: 1px solid #ff0000; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 9px; font-weight: bold; background: #ff0000; color: white; z-index: 99; line-height: 1; }
+body.mecanico-view .delete-item { display: none !important; }
+
+        /* Botão exclusivo mecânico */
+        .btn-mecanico-requisitar { width: 100%; padding: 14px; background: #00b140; color: white; font-size: 16px; font-weight: bold; border: none; border-radius: 12px; cursor: pointer; display: none; text-align: center; box-shadow: 0 4px 8px rgba(0,0,0,0.2); }
+        body.mecanico-view .btn-mecanico-requisitar { display: block !important; }
+        body.mecanico-view .btn-mecanico-requisitar:disabled { background: #555 !important; cursor: not-allowed; }
+
+        /* ================= PAINEL DO CARRINHO ================= */
+        .cart-grid { display: flex; flex-direction: column; gap: 15px; margin-top: 15px; }
+        .cart-card { background: white; border-radius: 14px; padding: 20px; border-left: 6px solid #e4001b; box-shadow: 0 4px 8px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }
+        .cart-card.low-stock { border-left-color: #ffcc00; }
+        .cart-info h4 { font-size: 18px; color: #002b73; margin-bottom: 5px; }
+        .cart-info p { font-size: 14px; color: #555; }
+        .btn-order { background: #00b140; color: white; border: none; padding: 12px 24px; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 15px; display: flex; align-items: center; gap: 8px; transition: background 0.2s; }
+        .btn-order:hover { background: #008f33; }
+
+        /* ================= CONFIGURAÇÕES E TABELAS ================= */
+        .config-box { background: white; padding: 25px; border-radius: 18px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); max-width: 750px; }
+        .config-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 18px; }
+        .config-group label { font-weight: bold; color: #002b73; font-size: 15px; }
+        .config-group input, .config-group select, .config-group textarea { padding: 12px; border: 2px solid #ccc; border-radius: 10px; font-size: 15px; outline: none; background: white; }
+        .config-group textarea { height: 160px; resize: vertical; font-family: monospace; line-height: 1.4; }
+        .btn-config-save { background: #002b73; color: white; padding: 12px 25px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; }
+
+        /* Estilos de tabelas no sistema */
+        .history-table-wrapper { background: white; border-radius: 18px; padding: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); overflow-x: auto; }
+        .history-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+        .history-table th { background: #002b73; color: white; padding: 12px; font-weight: bold; }
+        .history-table td { padding: 12px; border-bottom: 1px solid #e9eef7; color: #333; }
+        .history-table tbody tr { cursor: pointer; transition: background 0.2s; }
+        .history-table tbody tr:hover { background: #f0f4fc; }
+        .history-table tr:last-child td { border: none; }
+        .badge-history { padding: 4px 8px; border-radius: 6px; font-weight: bold; font-size: 12px; color: white; display: inline-block; }
+
+        /* Botões de Ação de Linhas de Aprovação */
+        .btn-table-approve { background: #00b140; color: white; border: none; padding: 6px 12px; font-weight: bold; border-radius: 6px; cursor: pointer; margin-right: 5px; }
+        .btn-table-reject { background: #d91c1c; color: white; border: none; padding: 6px 12px; font-weight: bold; border-radius: 6px; cursor: pointer; }
+
+        /* ================= MODAL CUSTOMIZADO ================= */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; z-index: 10000; }
+        .modal-box { background: linear-gradient(180deg,#0f4fb8,#002b73); padding: 25px; border-radius: 18px; width: min(480px, 90vw); max-height: 85vh; overflow-y: auto; box-shadow: 0 10px 25px rgba(0,0,0,0.3); color: white; border: 2px solid #2f7fff; }
+        .modal-box h3 { margin-bottom: 15px; font-size: 22px; color: #fff; border-bottom: 2px solid #e4001b; padding-bottom: 8px; }
+        .modal-group { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
+        .modal-group label { font-size: 14px; font-weight: bold; color: #7fb2ff; }
+        .modal-group input, .modal-group select { padding: 12px; border-radius: 8px; border: 2px solid #2f7fff; background: #001c4a; color: white; font-size: 15px; outline: none; }
+        .modal-group select option { background: #001c4a; color: white; }
+        .modal-buttons { display: flex; gap: 10px; margin-top: 20px; }
+        .modal-buttons button { flex: 1; padding: 14px; border: none; border-radius: 10px; font-size: 15px; font-weight: bold; cursor: pointer; color: white; }
+        .btn-save { background: #00b140; }
+        .btn-cancel { background: #d91c1c; }
+
+        /* Detalhes específicos do Modal de Log */
+        .log-details-list { display: flex; flex-direction: column; gap: 10px; margin-top: 15px; }
+        .log-details-item { background: rgba(0, 28, 74, 0.5); padding: 12px; border-radius: 10px; border-left: 4px solid #7fb2ff; }
+        .log-details-item span { font-weight: bold; color: #7fb2ff; display: block; font-size: 13px; margin-bottom: 2px; }
+        .log-details-item p { font-size: 16px; color: white; word-break: break-all; }
+
+        /* Botão Desconectar */
+        .logout-btn { background: #e4001b; color: white; border: none; border-radius: 10px; padding: 8px 15px; font-weight: bold; cursor: pointer; font-size: 14px; margin-left: 10px;}
+
+        /* ================= ALERTA DE SUCESSO FLUTUANTE ================= */
+        #toastNotice { position: fixed; top: 20px; right: 20px; background: #00b140; color: white; padding: 12px 25px; border-radius: 10px; font-weight: bold; box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: none; z-index: 100000; transition: opacity 0.3s ease; opacity: 0; }
+
+        @media(max-width:768px) {
+            .main-content { padding: 15px; }
+            .title-container h1 { font-size: 23px; }
+            .sticky-controls-wrapper { position: relative; padding: 10px 0; }
+            .top-bar input, .top-bar select, #addItemBtn { width: 100%; padding: 14px; }
+            body.mecanico-view .top-bar select { display: none !important; }
+            .summary-bar { flex-direction: column; align-items: flex-start; gap: 10px; }
+            .summary-left { width: 100%; flex-direction: column; align-items: flex-start; gap: 10px; }
+            .summary-status-container { margin-left: 0; width: 100%; flex-direction: column; gap: 10px; }
+            #container { grid-template-columns: 1fr; }
+            .cart-card { flex-direction: column; align-items: flex-start; gap: 14px; }
+            .btn-order { width: 100%; justify-content: center; }
+		#listaSugestoes li:hover {
+    background-color: #0f4fb8;
+}
+        }
+
+       .item-name { 
+    font-weight: bold; 
+    font-size: 19px; 
+    color: white; 
+    line-height: 1.2; 
+    padding-right: 10px;
+    
+    /* Regras para limitar em 2 linhas */
+    display: -webkit-box;
+    -webkit-line-clamp: 2; /* Limita a 2 linhas */
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    
+    /* Transição suave para o efeito de expansão (opcional) */
+    transition: all 0.3s ease;
+    cursor: default;
+}
+
+/* Efeito ao passar o mouse */
+.item-name:hover {
+    -webkit-line-clamp: unset; /* Remove a limitação de linhas */
+    background: rgba(0,0,0,0.2); /* Opcional: destaque leve no fundo */
+    position: relative;
+    z-index: 10; /* Garante que fique por cima de outros elementos */
+}
+
+.sticky-controls-wrapper {
+    padding: 10px 20px;
+    background: #fff;
+    border-bottom: 1px solid #ddd;
+}
+
+#searchHistory {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 16px;
+}
+
+    </style>
+</head>
+<body>
+
+<div id="toastNotice">Atualizado com sucesso!</div>
+
+<div id="loginScreen">
+    <div id="passwordArea">
+        <input type="password" id="passwordInput" placeholder="Digite a senha de acesso">
+        <button id="loginBtn" onclick="checkPassword()">ENTRAR</button>
+        <div id="errorMsg"></div>
+    </div>
+</div>
+
+<div class="sidebar" id="appSidebar" onclick="toggleSidebarMobile(event)">
+    <div class="sidebar-brand">
+        <img src="bimbo-logo.png" alt="Bimbo">
+        <h3>Almoxarifado</h3>
+    </div>
+    <div class="sidebar-menu">
+        <button class="menu-btn active" onclick="switchTab('dashboard', this)">
+            <span class="icon">📊</span> <span class="btn-text">Dashboard</span>
+        </button>
+        <button class="menu-btn" onclick="switchTab('approvals', this)">
+            <span class="icon">🛡️</span> <span class="btn-text">Aprovações</span> <span id="approvalBadge" class="badge">0</span>
+        </button>
+        <button class="menu-btn" onclick="switchTab('cart', this)">
+            <span class="icon">🛒</span> <span class="btn-text">Carrinho</span> <span id="cartBadge" class="badge">0</span>
+        </button>
+        <button class="menu-btn" onclick="switchTab('settings', this)">
+            <span class="icon">⚙️</span> <span class="btn-text">Configurações</span>
+        </button>
+        <button class="menu-btn" onclick="switchTab('history', this)">
+            <span class="icon">📜</span> <span class="btn-text">Histórico</span>
+        </button>
+        <button class="menu-btn" id="nav-mecanicos" onclick="switchTab('mecanicos', this)" style="display: none;">
+            <span class="icon">👥</span> <span class="btn-text">Mecânicos</span>
+        </button>
+    </div>
+</div>
+
+<div class="main-content">
+    <div id="section-dashboard" class="app-section active">
+        <div class="header">
+            <div class="title-container">
+                <h1 id="dashTitleMain">Controle de Estoque</h1>
+                <h2 id="dashTitleSub">Almoxarifado de Manutenção</h2>
+            </div>
+            <button class="logout-btn" onclick="logoutSystem()">Sair</button>
+        </div>
+        
+        <div class="sticky-controls-wrapper">
+            <div class="top-bar">
+                <input type="text" id="search" placeholder="Pesquisar por especificação, modelo, marca, fornecedor ou locação...">
+                <select id="sort">
+                    <option value="nameAsc">Nome A-Z</option>
+                    <option value="nameDesc">Nome Z-A</option>
+                    <option value="locationAsc">Locação (A-Z)</option>
+                    <option value="qtyDesc">Maior Quantidade</option>
+                    <option value="qtyAsc">Menor Quantidade</option>
+                </select>
+                <select id="filter">
+                    <option value="all">Todos</option>
+                    <option value="statusOk">✔️ Controle OK</option>
+                    <option value="statusLow">⚠️ Estoque Baixo</option>
+                    <option value="statusZero">❌ Estoque Zerado</option>
+                    <option value="positive">Quantidade Acima de 0</option>
+                </select>
+                <button id="addItemBtn" onclick="openItemModal()">+ Novo Item</button>
+            </div>
+
+            <div class="summary-bar">
+                <div class="summary-left">
+                    <div class="summary-item"><span>Itens:</span> <span id="totalItems" class="summary-value">0</span></div>
+                    <div class="summary-item"><span>Qtd Total:</span> <span id="totalQty" class="summary-value">0</span></div>
+                </div>
+                <div class="summary-status-container">
+                    <div class="status-badge" style="color: #00b140;">✔️ OK: <span id="countOk">0</span></div>
+                    <div class="status-badge" style="color: #ffcc00;">⚠️ Baixo: <span id="countLow">0</span></div>
+                    <div class="status-badge" style="color: #ff4d4d;">❌ Zerado: <span id="countZero">0</span></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="container"></div>
+    </div>
+
+    <div id="section-approvals" class="app-section">
+        <div class="header">
+            <div class="title-container">
+                <h1>Liberação de Materiais (Permissão de Retirada)</h1>
+                <h2>Aprovação de insumos solicitados pela equipe técnica da mecânica</h2>
+            </div>
+        </div>
+        <div class="history-table-wrapper">
+            <table class="history-table">
+                <thead>
+                    <tr>
+                        <th>Horário</th>
+                        <th>Item Requisitado</th>
+                        <th>Qtd Pedida</th>
+                        <th>Ordem Serviço (OS)</th>
+                        <th>Mecânico</th>
+                        <th>Linha</th>
+                        <th>Onde Usará</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="approvalsContainer">
+                    <tr><td colspan="8" style="text-align:center;">Nenhuma requisição pendente no momento.</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="section-cart" class="app-section">
+        <div class="header">
+            <div class="title-container">
+                <h1>Carrinho de Compras Semiautomático</h1>
+                <h2>Itens críticos que necessitam de pedido imediato</h2>
+            </div>
+        </div>
+        <div class="sticky-controls-wrapper">
+            <div class="top-bar">
+                <input type="text" id="searchCart" placeholder="Pesquisar itens no carrinho...">
+            </div>
+        </div>
+        <div class="cart-grid" id="cartContainer"></div>
+    </div>
+
+    <div id="section-settings" class="app-section">
+        <div class="header">
+            <div class="title-container">
+                <h1>Configurações do Sistema</h1>
+                <h2>Gerenciamento de disparos de pedidos e templates</h2>
+            </div>
+        </div>
+        <div class="config-box">
+            <div class="config-group">
+                <label>E-mails para Cópia Oculta (Cco)</label>
+                <input type="text" id="cfgBuyerEmail" placeholder="compras@bimbo.com">
+            </div>
+            <div class="config-group">
+                <label>Template da Mensagem de Compra (E-mail)</label>
+                <textarea id="cfgEmailTemplate"></textarea>
+            </div>
+            <div class="config-group">
+                <label>Template da Mensagem de Compra (WhatsApp)</label>
+                <textarea id="cfgWhatsappTemplate"></textarea>
+            </div>
+            <button class="btn-config-save" onclick="saveSettings()">Salvar Configurações</button>
+        </div>
+    </div>
+
+    <div id="section-history" class="app-section">
+        <div class="header">
+            <div class="title-container">
+                <h1>Histórico de Movimentações</h1>
+                <h2>Registro detalhado e rastreabilidade de insumos</h2>
+            </div>
+        </div>
+
+    <div class="sticky-controls-wrapper">
+            <div class="top-bar">
+                <input type="text" id="searchHistory" placeholder="Pesquisar por item, mecânico, OS, linha ou ação...">
+            </div>
+        </div>
+
+        <div class="history-table-wrapper">
+            <table class="history-table">
+                <thead>
+                    <tr>
+                        <th>Data/Hora</th>
+                        <th>Item / Modelo</th>
+                        <th>Ação</th>
+                        <th>Qtd.</th>
+                        <th>OS</th>
+                        <th>Mecânico</th>
+                        <th>Linha</th>
+                        <th>Onde Usou</th>
+                    </tr>
+                </thead>
+                <tbody id="historyContainer">
+                    <tr><td colspan="8" style="text-align:center;">Carregando histórico...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="section-mecanicos" class="app-section">
+        <div class="header">
+            <div class="title-container">
+                <h1>Gestão de Mecânicos</h1>
+                <h2>Cadastro e controle de acesso da equipe</h2>
+            </div>
+        </div>
+        <div class="sticky-controls-wrapper">
+            <div class="top-bar">
+                <!-- Botão com a classe padrão do sistema -->
+                <button id="addItemBtn" onclick="openMecanicoModal()">+ Novo Mecânico</button>
+            </div>
+        </div>
+        
+        <div class="history-table-wrapper">
+            <table class="history-table">
+                <thead>
+    <tr>
+        <th>Nome Completo</th>
+        <th>Registro/ID</th>
+        <th>Supervisor</th>
+        <th>Status</th>
+        <th>Ações</th>
+    </tr>
+</thead>
+<tbody id="mecanicosContainer">
+    <tr><td colspan="5" style="text-align:center;">Nenhum mecânico cadastrado.</td></tr>
+</tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div id="itemModal" class="modal-overlay">
+    <div class="modal-box">
+        <h3 id="modalTitle">Novo Item</h3>
+        <input type="hidden" id="modalItemId">
+        <div class="modal-group"><label>Nome do Item</label><input type="text" id="modalName"></div>
+        <div id="additionalModalFields">
+            <div class="modal-group"><label>Marca</label><input type="text" id="modalBrand"></div>
+            <div class="modal-group"><label>Modelo</label><input type="text" id="modalModel"></div>
+            <div class="modal-group"><label>Fornecedor</label><input type="text" id="modalSupplier"></div>
+            <div class="modal-group"><label>Contato</label><input type="text" id="modalContact"></div>
+            <div class="modal-group"><label>Locação</label><input type="text" id="modalLocation"></div>
+            <div class="modal-group"><label>Estoque Mínimo</label><input type="number" id="modalMinQty" min="0"></div>
+        </div>
+        <div class="modal-buttons">
+            <button class="btn-save" onclick="saveModalItem()">Salvar</button>
+		
+            <!-- No seu HTML, dentro do justificativaModal -->
+<button class="btn-cancel" onclick="closeItemModal()">Cancelar</button>
+        </div>
+    </div>
+</div>
+
+<div id="requisitionModal" class="modal-overlay">
+    <div class="modal-box" style="border-color: #00b140;">
+        <h3>Solicitar Retirada de Insumo</h3>
+        <input type="hidden" id="reqItemId">
+        <div class="modal-group">
+            <label>Item Selecionado</label>
+            <input type="text" id="reqItemName" readonly style="background: rgba(255,255,255,0.1); border-color: #555;">
+        </div>
+        <div class="modal-group">
+    <label>Número da Ordem de Serviço (OS)</label>
+    <input type="text" id="reqOS" placeholder="Ex: 10452" maxlength="11">
+	  </div>
+        <div class="modal-group" style="position: relative;">
+    <label>Nome do Mecânico / Requisitante</label>
+    <input type="text" id="reqMecanico" placeholder="Digite para buscar..." onkeyup="filtrarMecanicosSugestao()" autocomplete="off">
+    <!-- Lista de sugestões abaixo do input -->
+    <ul id="listaSugestoes" style="position: absolute; width: 100%; background: #001c4a; border: 1px solid #2f7fff; border-radius: 8px; list-style: none; z-index: 999; display: none; margin-top: 5px; max-height: 150px; overflow-y: auto;"></ul>
+</div>
+        <div class="modal-group">
+            <label>Linha de Produção</label>
+            <select id="reqLinha">
+                <option value="Bolleria">Bolleria</option>
+                <option value="Pães Brancos">Pães Brancos</option>
+                <option value="Pães Especias">Pães Especiais</option>
+                <option value="Utilidades">Utilidades</option>
+                <option value="Oficina">Oficina</option>
+            </select>
+        </div>
+        <div class="modal-group">
+            <label>Local de Aplicação / Máquina</label>
+            <input type="text" id="reqLocalAplicacao" placeholder="Ex: Forno 3, Esteira Embalagem">
+        </div>
+        <div class="modal-group">
+            <label>Quantidade a Retirar</label>
+            <input type="number" id="reqQty" min="1" value="1">
+            <small id="reqMaxNotice" style="color: #7fb2ff; margin-top: 4px; display: block; font-weight: bold;"></small>
+        </div>
+        <div class="modal-buttons">
+            <button class="btn-save" onclick="submitMecanicoRequisition()" style="background: #00b140;">Enviar para Aprovação</button>
+            <button class="btn-cancel" onclick="closeRequisitionModal()">Cancelar</button>
+        </div>
+    </div>
+</div>
+
+<div id="mecanicoModal" class="modal-overlay">
+    <div class="modal-box">
+        <h3>Cadastrar Mecânico</h3>
+        <div class="modal-group"><label>Nome Completo</label><input type="text" id="mecName" onblur="formatarTextoCapitalizado(this)"></div>
+        <div class="modal-group"><label>Registro/ID</label><input type="text" id="mecId"></div>
+        <div class="modal-group">
+            <label>Supervisor</label>
+            <select id="mecSupervisor" style="width: 100%; padding: 8px; margin-top: 5px;">
+                <option value="Cleber Alexon de Freitas">Cleber Alexon de Freitas</option>
+                <option value="Thiago Madureira dos Santos">Thiago Madureira dos Santos</option>
+                <option value="Clodoaldo Barreiro da Silva">Clodoaldo Barreiro da Silva</option>
+                <option value="Valdomiro de Souza Melo Junior">Valdomiro de Souza Melo Junior</option>
+                <option value="Luiz Paulo Feitosa Santos">Luiz Paulo Feitosa Santos</option>
+            </select>
+        </div>
+
+    <div class="modal-group">
+            <label>Status</label>
+            <select id="mecStatus" style="width: 100%; padding: 8px; margin-top: 5px;">
+                <option value="Ativo">Ativo</option>
+                <option value="Inativo">Inativo</option>
+            </select>
+        </div>
+
+        <div class="modal-buttons">
+            <button class="btn-save" onclick="saveMecanico()">Salvar</button>
+            <button class="btn-cancel" onclick="closeMecanicoModal()">Cancelar</button>
+        </div>
+    </div>
+</div>
+
+<div id="historyDetailModal" class="modal-overlay">
+    <div class="modal-box" style="border-color: #ffcc00; width: min(540px, 95vw);">
+        <h3>🔍 Detalhes da Movimentação</h3>
+        <div class="log-details-list" id="logDetailsContainer"></div>
+        <div class="modal-buttons" style="margin-top: 25px;">
+            <button class="btn-cancel" onclick="closeHistoryDetailModal()" style="background: #002b73;">Fechar Painel</button>
+        </div>
+    </div>
+</div>
+
+<div id="mecanicoStatsModal" class="modal-overlay">
+    <div class="modal-box" style="border-color: #7fb2ff; width: min(480px, 90vw);">
+        <h3 id="statsTitle">Estatísticas do Mecânico</h3>
+        <div id="statsContent" class="log-details-list">
+            <!-- Conteúdo injetado via JS -->
+        </div>
+        <div class="modal-buttons">
+            <button class="btn-cancel" onclick="closeStatsModal()" style="background: #002b73;">Fechar</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Justificativa -->
+<div id="justificativaModal" class="modal-overlay">
+    <div class="modal-box">
+        <h3>Justificar Alteração de Estoque</h3>
+        <div class="modal-group">
+            <label>Motivo da Alteração</label>
+            <select id="selectMotivo">
+                <option value="Compra/Nota Fiscal">Compra/Nota Fiscal</option>
+                <option value="Devolução">Devolução</option>
+                <option value="Ajuste de Inventário">Ajuste de Inventário</option>
+                <option value="Outros">Outros</option>
+            </select>
+        </div>
+        <div class="modal-group">
+            <label>Observação Detalhada</label>
+            <textarea id="obsJustificativa" placeholder="Descreva o motivo..." style="background: #001c4a; color: white; padding: 10px; border-radius: 8px; border: 2px solid #2f7fff; width: 100%;"></textarea>
+        </div>
+        <div class="modal-buttons">
+            <button class="btn-save" onclick="confirmarAlteracaoEstoque()">Confirmar</button>
+            <!-- Botão corrigido abaixo -->
+            <button class="btn-cancel" onclick="cancelarAlteracaoEstoque()">Cancelar</button>
+        </div>
+    </div>
+</div>
+
+<script>
+let items = [];
+let historyList = [];
+let pendingApprovalsList = [];
+let mecanicosList = []; // Array para salvar os dados dos mecânicos
+let configs = {};
+let initialized = false;
+let filteredList = [];
+let itemsDisplayedCount = 0;
+let historyDisplayedCount = 0;
+let timerJustificativa = null; 
+let bufferMudancas = {};
+let currentActiveTab = 'dashboard';
+const ITEMS_PER_PAGE = 30;
+
+let pendingUpdates = {};
+let toastTimeout;
+let scrollTimeout;
+let lastFilteredLength = 0;
+
+// --- FUNÇÕES GESTÃO DE MECÂNICOS ---
+
+function saveMecanico() {
+    const nome = document.getElementById("mecName").value;
+    const id = document.getElementById("mecId").value;
+    const supervisor = document.getElementById("mecSupervisor").value;
+    const status = document.getElementById("mecStatus").value; // Captura o status selecionado
+    
+    if(!nome || !id) {
+        alert("Por favor, preencha o Nome e o ID.");
+        return;
+    }
+
+    const novoMecanico = { nome, id, supervisor, status }; // Inclui o status no objeto
+    
+    // Salva no Firebase na pasta 'mecanicos' usando o ID como chave
+    window.fb.set(window.fb.ref(window.fb.db, 'mecanicos/' + id), novoMecanico)
+    .then(() => {
+        alert("Mecânico salvo com sucesso!");
+        closeMecanicoModal();
+        
+        // Limpar campos após salvar
+        document.getElementById("mecName").value = "";
+        document.getElementById("mecId").value = "";
+    })
+    .catch(err => alert("Erro ao salvar: " + err.message));
+}
+
+function renderMecanicos() {
+    const container = document.getElementById("mecanicosContainer");
+    if(mecanicosList.length === 0) {
+        container.innerHTML = '<tr><td colspan="5" style="text-align:center;">Nenhum mecânico cadastrado.</td></tr>';
+        return;
+    }
+    
+    container.innerHTML = mecanicosList.map((m, index) => `
+        <tr style="cursor: pointer;" onclick="abrirStatsMecanico('${m.nome}')">
+            <td style="color: #0f4fb8; font-weight: bold; text-decoration: underline;">${m.nome}</td>
+            <td>${m.id}</td>
+            <td>${m.supervisor}</td>
+            <td>
+                <span class="status-badge" style="color:${m.status === 'Ativo' ? '#00b140' : '#d91c1c'}; font-weight: bold;">
+                    ${m.status || 'Ativo'}
+                </span>
+            </td>
+            <td>
+                <div style="display: flex; gap: 5px; justify-content: center;">
+                    <button class="btn-table-approve" style="padding: 6px 10px;" onclick="event.stopPropagation(); abrirEdicaoMecanico('${m.id}')">✎</button>
+                    <button class="btn-table-reject" style="padding: 6px 10px;" onclick="event.stopPropagation(); removerMecanico(${index})">✕</button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function removerMecanico(index) {
+    const mecanicoParaRemover = mecanicosList[index];
+    
+    if(confirm("Deseja remover o mecânico " + mecanicoParaRemover.nome + "?")) {
+        // Remove do Firebase usando o ID único do mecânico
+        window.fb.remove(window.fb.ref(window.fb.db, 'mecanicos/' + mecanicoParaRemover.id))
+        .then(() => {
+            alert("Mecânico removido com sucesso!");
+            // Não é necessário dar splice aqui, pois o onValue no init() 
+            // já atualizará o array mecanicosList automaticamente ao detectar a mudança no Firebase
+        })
+        .catch(err => {
+            alert("Erro ao remover do banco de dados: " + err.message);
+        });
+    }
+}
+
+function filtrarMecanicosSugestao() {
+    const input = document.getElementById("reqMecanico");
+    const filtro = input.value.toLowerCase();
+    const lista = document.getElementById("listaSugestoes");
+    
+    // Limpa a lista anterior
+    lista.innerHTML = "";
+
+    if (filtro.length === 0) {
+        lista.style.display = "none";
+        return;
+    }
+
+    // Filtra os mecânicos que correspondem ao que foi digitado
+    const sugestoes = mecanicosList.filter(m => 
+        m.nome.toLowerCase().includes(filtro)
+    );
+
+    if (sugestoes.length > 0) {
+        sugestoes.forEach(m => {
+            const li = document.createElement("li");
+            li.textContent = m.nome;
+            li.style.padding = "10px";
+            li.style.cursor = "pointer";
+            li.style.color = "white";
+            li.style.borderBottom = "1px solid #2f7fff";
+            
+            // Ao clicar na sugestão, preenche o campo
+            li.onclick = () => {
+                input.value = m.nome;
+                lista.style.display = "none";
+            };
+            lista.appendChild(li);
+        });
+        lista.style.display = "block";
+    } else {
+        lista.style.display = "none";
+    }
+}
+
+function openMecanicoModal() { document.getElementById('mecanicoModal').style.display = 'flex'; 
+}
+
+function abrirEdicaoMecanico(id) {
+    const mecanico = mecanicosList.find(m => m.id === id);
+    if (!mecanico) return;
+
+    // Preenche os campos do modal com os dados atuais
+    document.getElementById("mecName").value = mecanico.nome;
+    document.getElementById("mecId").value = mecanico.id;
+    document.getElementById("mecId").readOnly = true; // Bloqueia o ID para não alterar a chave principal no Firebase
+    document.getElementById("mecSupervisor").value = mecanico.supervisor;
+    
+    // Nova linha: Carrega o status salvo no Firebase para o campo select
+    document.getElementById("mecStatus").value = mecanico.status || "Ativo";
+
+    // Ajusta o título do modal
+    document.querySelector("#mecanicoModal h3").innerText = "Editar Mecânico";
+    
+    // Abre o modal
+    document.getElementById("mecanicoModal").style.display = 'flex';
+}
+
+function closeMecanicoModal() { 
+    // Fecha o modal
+    document.getElementById("mecanicoModal").style.display = 'none';
+    
+    // Reseta o título para o padrão de cadastro
+    document.querySelector("#mecanicoModal h3").innerText = "Cadastrar Mecânico";
+    
+    // Limpa os campos
+    document.getElementById("mecName").value = "";
+    document.getElementById("mecId").value = "";
+    
+    // Desbloqueia o campo ID para novos cadastros
+    document.getElementById("mecId").readOnly = false;
+}
+
+function getUserRole() {
+    return sessionStorage.getItem("bimboRole");
+}
+
+function showToast() {
+    const toast = document.getElementById("toastNotice");
+    if(!toast) return;
+    toast.style.display = "block";
+    setTimeout(() => { toast.style.opacity = "1"; }, 10);
+    clearTimeout(toastTimeout);
+    toastTimeout = setTimeout(() => {
+        toast.style.opacity = "0";
+        setTimeout(() => { toast.style.display = "none"; }, 300);
+    }, 2000);
+}
+
+// Certifique-se de que o auth foi inicializado logo abaixo dos seus imports
+const auth = getAuth(); 
+
+
+function applyViewModeRules() {
+    const role = getUserRole(); // Agora ela lê do sessionStorage
+    const btnMecanicos = document.getElementById("nav-mecanicos");
+    
+    if(role === "user") {
+        document.body.classList.add("mecanico-view");
+        document.getElementById("dashTitleMain").innerText = "Painel de Requisições";
+        document.getElementById("dashTitleSub").innerText = "Solicitação Exclusiva de Insumos - Mecânica";
+        
+        if(btnMecanicos) btnMecanicos.style.display = "none";
+        
+        const sortEl = document.getElementById("sort");
+        const filterEl = document.getElementById("filter");
+        if(sortEl) sortEl.style.display = "none";
+        if(filterEl) filterEl.value = "positive"; 
+    } else {
+        document.body.classList.remove("mecanico-view");
+        if(btnMecanicos) btnMecanicos.style.display = "flex";
+    }
+}
+
+function logoutSystem() {
+    sessionStorage.removeItem("bimboRole");
+    window.location.reload();
+}
+
+function toggleSidebarMobile(e) {
+    if(getUserRole() === "user") return; 
+    if(window.innerWidth <= 768) {
+        const sidebar = document.getElementById("appSidebar");
+        if(sidebar && (e.target.classList.contains("sidebar") || e.target.closest(".sidebar-brand"))) {
+            sidebar.classList.toggle("expanded");
+        }
+    }
+}
+
+function find(id){ return items.find(i=>i.id===parseInt(id)); }
+
+function switchTab(tabId, btn) {
+    if(getUserRole() === "user") return; 
+    currentActiveTab = tabId;
+    document.querySelectorAll('.app-section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.menu-btn').forEach(b => b.classList.remove('active'));
+    
+    const section = document.getElementById(`section-${tabId}`);
+    if(section) section.classList.add('active');
+    if(btn) btn.classList.add('active');
+    
+    const sidebar = document.getElementById("appSidebar");
+    if(sidebar) sidebar.classList.remove("expanded");
+    
+    window.scrollTo({top: 0});
+    
+    if (tabId === 'dashboard') {
+        lastFilteredLength = 0;
+        applyFilterAndSort();
+    } else if (tabId === 'cart') {
+        preCalculatedTotalsAndCart();
+    } else if (tabId === 'approvals') {
+        renderApprovalsTable();
+    } else if (tabId === 'history') {
+        historyDisplayedCount = 0;
+        const container = document.getElementById("historyContainer");
+        if(container) container.innerHTML = "";
+        loadMoreHistory();
+    }
+}
+
+function saveSettings() {
+    configs.buyerEmail = document.getElementById("cfgBuyerEmail").value.trim();
+    configs.template = document.getElementById("cfgEmailTemplate").value;
+    configs.whatsappTemplate = document.getElementById("cfgWhatsappTemplate").value;
+    
+    window.fb.set(window.fb.ref(window.fb.db, 'config/'), configs)
+        .then(() => showToast())
+        .catch(err => alert("Erro ao salvar: " + err.message));
+}
+
+function preCalculatedTotalsAndCart() {
+    let okCount = 0, lowCount = 0, zeroCount = 0, totalQty = 0, criticalCartCount = 0;
+    const cartContainer = document.getElementById("cartContainer");
+    const cartSearch = document.getElementById("searchCart") ? document.getElementById("searchCart").value.toLowerCase() : "";
+    
+    let cartFragment = (currentActiveTab === 'cart' && cartContainer) ? document.createDocumentFragment() : null;
+
+    for(let i=0; i<items.length; i++) {
+        const item = items[i];
+        if(!item) continue;
+        const minQty = item.minQty || 0;
+        const currentQty = item.qty || 0;
+        totalQty += currentQty;
+
+        if (currentQty === 0) zeroCount++;
+        else if (minQty > 0 && currentQty < minQty) lowCount++;
+        else okCount++;
+
+        if (minQty > 0 && currentQty < minQty) {
+            criticalCartCount++;
+            
+            if (currentActiveTab === 'cart' && cartContainer) {
+                const matchesCartSearch = !cartSearch || 
+                    item.name.toLowerCase().includes(cartSearch) || 
+                    (item.brand && item.brand.toLowerCase().includes(cartSearch)) || 
+                    (item.model && item.model.toLowerCase().includes(cartSearch)) ||
+                    (item.supplier && item.supplier.toLowerCase().includes(cartSearch));
+
+                if (!matchesCartSearch) continue;
+                const isZero = currentQty === 0;
+
+                const cartCard = document.createElement("div");
+                cartCard.className = `cart-card ${!isZero ? 'low-stock' : ''}`;
+                cartCard.innerHTML = `
+                    <div class="cart-info">
+                        <h4>${item.name}</h4>
+                        <p><b>Modelo:</b> ${item.model || '---'} | <b>Fornecedor:</b> ${item.supplier || 'Não Definido'}</p>
+                        <p><b>Qtd Atual:</b> <span style="color:#e4001b; font-weight:bold">${currentQty}</span> | Mínimo: ${minQty}</p>
+                        <p style="margin-top:4px; font-size:13px; color:#002b73;"><b>Quantidade do Pedido (2x Mínimo):</b> ${minQty * 2} un.</p>
+                        <span class="reason" style="background:${isZero ? '#ffd2d2':'#ffeeb3'}; color:${isZero ? '#d91c1c':'#b78a00'}; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: bold; display: inline-block; margin-top: 5px;">
+                            ${isZero ? '❌ ESTOQUE ZERADO' : '⚠️ ESTOQUE CRÍTICO'}
+                        </span>
+                    </div>
+                    <button class="btn-order" onclick="triggerSemiAutoPurchase(${item.id})">✉️ Comprar</button>
+                `;
+                cartFragment.appendChild(cartCard);
+            }
+        }
+    }
+    
+    if (currentActiveTab === 'cart' && cartContainer) {
+        cartContainer.innerHTML = "";
+        cartContainer.appendChild(cartFragment);
+    }
+    
+    const cartBadge = document.getElementById("cartBadge");
+    const tQty = document.getElementById("totalQty");
+    const cOk = document.getElementById("countOk");
+    const cLow = document.getElementById("countLow");
+    const cZero = document.getElementById("countZero");
+
+    if (cartBadge) cartBadge.innerText = criticalCartCount;
+    if (tQty) tQty.innerText = totalQty;
+    if (cOk) cOk.innerText = okCount;
+    if (cLow) cLow.innerText = lowCount;
+    if (cZero) cZero.innerText = zeroCount;
+}
+
+function applyFilterAndSort() {
+    const searchEl = document.getElementById("search");
+    const sortEl = document.getElementById("sort");
+    const filterEl = document.getElementById("filter");
+    
+    const rawSearch = searchEl ? searchEl.value.toLowerCase() : "";    
+    const sort = sortEl ? sortEl.value : "nameAsc";    
+    const filter = filterEl ? filterEl.value : "all";
+
+    // --- LÓGICA DE PESQUISA AVANÇADA ---
+    // Encontra tudo entre asteriscos (ex: *206* *peca*)
+    const advancedTerms = rawSearch.match(/\*([^*]+)\*/g);
+    // Remove os termos avançados da string de busca comum
+    const commonSearch = rawSearch.replace(/\*[^*]+\*/g, '').trim();
+
+    filteredList = items.filter(item => {
+        if (!item) return false;
+
+        // Concatenamos todos os campos para busca
+        const fullText = [item.name, item.brand, item.model, item.supplier, item.location]
+            .join(" ").toLowerCase();
+
+        // 1. Validação dos termos obrigatórios (*...*)
+        if (advancedTerms) {
+            for (let match of advancedTerms) {
+                const term = match.replace(/\*/g, '').trim();
+                if (term && !fullText.includes(term)) return false; // Se não contiver o termo obrigatório, descarta
+            }
+        }
+
+        // 2. Validação da busca comum (o restante do texto)
+        const matchesCommon = !commonSearch || 
+            (item.name && item.name.toLowerCase().includes(commonSearch)) || 
+            (item.brand && item.brand.toLowerCase().includes(commonSearch)) || 
+            (item.model && item.model.toLowerCase().includes(commonSearch)) ||
+            (item.supplier && item.supplier.toLowerCase().includes(commonSearch)) ||
+            (item.location && item.location.toLowerCase().includes(commonSearch));
+
+        if (!matchesCommon) return false;
+
+        // 3. Filtros de Status (Mantido o original)
+        const minQty = item.minQty || 0;
+        const qty = item.qty || 0;
+
+        if (filter === "statusZero") return qty === 0;
+        if (filter === "statusLow") return minQty > 0 && qty > 0 && qty < minQty;
+        if (filter === "statusOk") return (minQty > 0 && qty >= minQty) || (minQty === 0 && qty > 0); 
+        if (filter === "positive") return qty > 0;
+        return true;
+    });
+
+    // --- ORDENAÇÃO (Mantida a original) ---
+    if (getUserRole() !== "user") {
+        if (sort === "nameAsc") {
+            filteredList.sort((a, b) => {
+                const nameA = (a.name || "").trim();
+                const nameB = (b.name || "").trim();
+                const aIsAlpha = /^[a-zA-Z]/.test(nameA);
+                const bIsAlpha = /^[a-zA-Z]/.test(nameB);
+                if (aIsAlpha && !bIsAlpha) return -1;
+                if (!aIsAlpha && bIsAlpha) return 1;
+                return nameA.localeCompare(nameB, undefined, { numeric: true });
+            });
+        } else if (sort === "nameDesc") {
+            filteredList.sort((a, b) => {
+                const nameA = (a.name || "").trim();
+                const nameB = (b.name || "").trim();
+                const aIsAlpha = /^[a-zA-Z]/.test(nameA);
+                const bIsAlpha = /^[a-zA-Z]/.test(nameB);
+                if (aIsAlpha && !bIsAlpha) return -1;
+                if (!aIsAlpha && bIsAlpha) return 1;
+                return nameB.localeCompare(nameA, undefined, { numeric: true });
+            });
+        } else if (sort === "locationAsc") {
+            filteredList.sort((a, b) => {
+                const locA = (a.location || "").trim(); 
+                const locB = (b.location || "").trim();
+                if (!locA && locB) return 1; 
+                if (locA && !locB) return -1;
+                return locA.localeCompare(locB, undefined, { numeric: true });
+            });
+        } else if (sort === "qtyAsc") {
+            filteredList.sort((a, b) => a.qty - b.qty);
+        } else if (sort === "qtyDesc") {
+            filteredList.sort((a, b) => b.qty - a.qty);
+        }
+    } else {
+        filteredList.sort((a, b) => {
+            const nameA = (a.name || "").trim();
+            const nameB = (b.name || "").trim();
+            const aIsAlpha = /^[a-zA-Z]/.test(nameA);
+            const bIsAlpha = /^[a-zA-Z]/.test(nameB);
+            if (aIsAlpha && !bIsAlpha) return -1;
+            if (!aIsAlpha && bIsAlpha) return 1;
+            return nameA.localeCompare(nameB, undefined, { numeric: true });
+        });
+    }
+
+    const totalItemsEl = document.getElementById("totalItems");
+    if (totalItemsEl) totalItemsEl.innerText = filteredList.length;
+    
+    if (filteredList.length !== lastFilteredLength) {
+        lastFilteredLength = filteredList.length;
+        itemsDisplayedCount = 0;
+        const container = document.getElementById("container");
+        if(container) container.innerHTML = "";
+        
+        if (currentActiveTab === 'dashboard') {
+            requestAnimationFrame(() => {
+                loadMoreItems();
+            });
+        }
+    } else {
+        filteredList.forEach(item => updateSingleCardUI(item.id));
+    }
+}
+
+function loadMoreItems() {
+    if (itemsDisplayedCount >= filteredList.length) return;
+    const container = document.getElementById("container");
+    if (!container) return;
+    
+    const fragment = document.createDocumentFragment();
+    const nextBatchLimit = Math.min(itemsDisplayedCount + ITEMS_PER_PAGE, filteredList.length);
+    const role = getUserRole();
+
+    for (let i = itemsDisplayedCount; i < nextBatchLimit; i++) {
+        const item = filteredList[i];
+        const minQty = item.minQty || 0;
+        const qty = item.qty || 0;
+        let statusHTML = "";
+
+        if (qty === 0) statusHTML = `<div class="status-warning status-badge-el" style="color:#ff4d4d;">❌ Estoque Zerado</div>`;
+        else if (minQty > 0 && qty < minQty) statusHTML = `<div class="status-warning status-badge-el" style="color:#ffcc00;">⚠️ Abaixo do Mínimo</div>`;
+        else statusHTML = `<div class="status-warning status-badge-el" style="color:#00b140;">✔️ Controle OK</div>`;
+
+        const card = document.createElement("div");
+        card.className = "card";
+        card.id = `card-item-${item.id}`;
+        
+        card.innerHTML = `            
+            <span class="delete-item" onclick="deleteItem(${item.id})">✕</span>
+            <div class="card-header">                
+                <span class="item-name">${item.name}</span>                
+                <span class="gear" onclick="openRenameModal(${item.id})">⚙️</span>            
+            </div>
+            <div class="item-details">
+                <p><span>Marca:</span> <span class="card-text-value brand-val">${item.brand || '---'}</span></p>
+                <p><span>Modelo:</span> <span class="card-text-value model-val">${item.model || '---'}</span></p>
+                <p style="${role === 'user' ? 'display:none' : ''}"><span>Fornecedor:</span> <span class="card-text-value supplier-val">${item.supplier || '---'}</span></p>
+                <p style="${role === 'user' ? 'display:none' : ''}"><span>Contato:</span> <span class="card-text-value contact-val">${item.contact || '---'}</span></p>
+                <p><span>Locação:</span> <span class="card-text-value location-val">${item.location || '---'}</span></p>
+                <p style="${role === 'user' ? 'display:none' : ''}"><span>Estoque Mín:</span> <span class="card-text-value min-qty-val">${minQty}</span></p>
+            </div>
+            <div class="counter">                
+                <button onclick="changeQty(${item.id},-1)">−</button>                
+                <div class="value" id="qty-val-${item.id}">${qty}</div>                
+                <button onclick="changeQty(${item.id},1)">+</button>            
+            </div>
+            <div class="mecanico-qty-display" id="mecanico-qty-lbl-${item.id}" style="display:none;">Qtd Disponível: ${qty} un.</div>
+            ${statusHTML}
+            <div class="actions">                
+                <button onclick="addAmount(${item.id})">Adicionar</button>                
+                <button onclick="removeAmount(${item.id})">Retirar</button>            
+            </div>
+            <button class="btn-mecanico-requisitar" ${qty === 0 ? 'disabled' : ''} onclick="openRequisitionModal(${item.id})">
+                ${qty === 0 ? '❌ Indisponível' : '📥 Solicitar Material'}
+            </button>
+        `;
+        fragment.appendChild(card);
+    }
+    container.appendChild(fragment);
+    itemsDisplayedCount = nextBatchLimit;
+}
+
+/* Fluxo de Requisição de Insumos (Mecânico) */
+function openRequisitionModal(id) {
+    const item = find(id); if(!item) return;
+    document.getElementById("reqItemId").value = id;
+    document.getElementById("reqItemName").value = item.name;
+    document.getElementById("reqOS").value = "";
+    document.getElementById("reqMecanico").value = "";
+    document.getElementById("reqLinha").value = "Bolleria";
+    document.getElementById("reqLocalAplicacao").value = "";
+    document.getElementById("reqQty").value = "1";
+    document.getElementById("reqMaxNotice").innerText = `Estoque disponível: ${item.qty} un.`;
+    document.getElementById("requisitionModal").style.display = "flex";
+}
+
+function closeRequisitionModal() {
+    document.getElementById("requisitionModal").style.display = "none";
+}
+
+function submitMecanicoRequisition() {
+    document.getElementById("listaSugestoes").style.display = "none"
+    const id = document.getElementById("reqItemId").value;
+    const os = document.getElementById("reqOS").value.trim();
+    let mecanicoRaw = document.getElementById("reqMecanico").value.trim();
+    const linha = document.getElementById("reqLinha").value;
+    const local = document.getElementById("reqLocalAplicacao").value.trim();
+    const qtyToWithdraw = parseInt(document.getElementById("reqQty").value) || 0;
+
+    if(!os) { alert("O número da OS é obrigatório!"); return; }
+    if(!mecanicoRaw) { alert("Insira o nome do mecânico solicitante!"); return; }
+    if(!local) { alert("Por favor, insira o local ou máquina onde a peça será aplicada!"); return; }
+    if(qtyToWithdraw <= 0) { alert("A quantidade deve ser maior que zero!"); return; }
+
+    const item = find(id);
+    if(!item) return;
+
+    if(qtyToWithdraw > item.qty) {
+        alert(`A quantidade solicitada excede o estoque atual de ${item.qty} unidades.`);
+        return;
+    }
+
+    // Tratamento estrito do texto: Remove acentos e capitaliza cada palavra
+    let mecanicoSemAcento = mecanicoRaw.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    let mecanicoFormatado = mecanicoSemAcento.toLowerCase().replace(/(?:^|\s)\S/g, function(a) { 
+        return a.toUpperCase(); 
+    });
+
+    const reqData = {
+        itemId: id,
+        itemName: item.name,
+        itemModel: item.model || "---",
+        qty: qtyToWithdraw,
+        os: os,
+        solicitante: mecanicoFormatado,
+        linha: linha,
+        localAplicacao: local,
+        timestamp: new Date().toLocaleString("pt-BR"),
+        numericTimestamp: Date.now()
+    };
+
+    window.fb.push(window.fb.ref(window.fb.db, 'requisicoes_pendentes/'), reqData).then(() => {
+        closeRequisitionModal();
+        alert("Solicitação enviada com sucesso! Aguarde a liberação do Almoxarifado.");
+    });
+}
+
+/* Lógica da Nova Aba de Aprovações (Admin) */
+function renderApprovalsTable() {
+    const container = document.getElementById("approvalsContainer");
+    if (!container) return;
+
+    if (pendingApprovalsList.length === 0) {
+        container.innerHTML = `<tr><td colspan="8" style="text-align:center; font-weight:bold; color:#666;">Nenhuma requisição pendente no momento.</td></tr>`;
+        return;
+    }
+
+    const fragment = document.createDocumentFragment();
+    pendingApprovalsList.forEach(req => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+            <td>${req.timestamp}</td>
+            <td><b>${req.itemName}</b><br><small style="color:#002b73;">Mod: ${req.itemModel}</small></td>
+            <td><strong style="color:#e4001b; font-size:15px;">${req.qty} un.</strong></td>
+            <td><mark style="background:#ffeeb3; padding:2px 6px; border-radius:4px; font-weight:bold;">${req.os}</mark></td>
+            <td>${req.solicitante}</td>
+            <td><span style="background:#0f4fb8; color:white; padding:2px 6px; border-radius:4px; font-size:12px; font-weight:bold;">${req.linha || '---'}</span></td>
+            <td><i>${req.localAplicacao}</i></td>
+            <td>
+                <button class="btn-table-approve" onclick="processApproval('${req._key}', true)">✔️ Liberar</button>
+                <button class="btn-table-reject" onclick="processApproval('${req._key}', false)">❌ Recusar</button>
+            </td>
+        `;
+        fragment.appendChild(tr);
+    });
+
+    container.innerHTML = "";
+    container.appendChild(fragment);
+}
+
+function processApproval(key, isApproved) {
+    const req = pendingApprovalsList.find(r => r._key === key);
+    if (!req) return;
+
+   if (!isApproved) {
+        if (confirm(`Tem certeza que deseja recusar a retirada?`)) {
+            // Registra a recusa no histórico antes de remover do pendente
+            logToHistory(req.itemId, "Requisição Recusada", 0, find(req.itemId).qty, req.solicitante, req.os, req.localAplicacao, "Almoxarifado");
+            
+            window.fb.remove(window.fb.ref(window.fb.db, `requisicoes_pendentes/${key}`)).then(() => showToast());
+        }
+        return;
+    }
+
+    const approverName = prompt("Insira o nome do operador do Almoxarifado que está autorizando a saída:");
+    if (!approverName || !approverName.trim()) {
+        alert("Operação cancelada. É obrigatório identificar o responsável pela liberação.");
+        return;
+    }
+
+    const item = find(req.itemId);
+    if (!item) {
+        alert("Insumo não encontrado no cadastro do estoque atual.");
+        return;
+    }
+
+    if (req.qty > item.qty) {
+        alert(`Erro de consistência: O estoque atual (${item.qty} un.) é menor do que a quantidade pedida (${req.qty} un.).`);
+        return;
+    }
+
+    item.qty -= req.qty;
+    updateSingleCardUI(item.id);
+    preCalculatedTotalsAndCart();
+
+    const updates = {};
+    updates[`estoque/${item.id}/qty`] = item.qty;
+    updates[`requisicoes_pendentes/${key}`] = null;
+
+    window.fb.update(window.fb.ref(window.fb.db), updates).then(() => {
+        showToast();
+        logToHistory(item.id, `Saída (OS Aprovada)`, req.qty, item.qty, req.solicitante, req.os, req.localAplicacao, approverName.trim(), req.linha);
+    });
+}
+
+/* Lógica Otimizada do Histórico */
+function loadMoreHistory() {
+    if (historyDisplayedCount >= historyList.length) return;
+    const container = document.getElementById("historyContainer");
+    if (!container) return;
+
+    const fragment = document.createDocumentFragment();
+    const nextBatchLimit = Math.min(historyDisplayedCount + ITEMS_PER_PAGE, historyList.length);
+
+    for (let i = historyDisplayedCount; i < nextBatchLimit; i++) {
+        const log = historyList[i];
+        const tr = document.createElement("tr");
+        
+        tr.onclick = () => openHistoryDetailModal(log);
+
+        let badgeStyle = "background:#00b140;"; 
+        if(log.type.includes("Saída") || log.type.includes("Exclusão")) badgeStyle = "background:#d91c1c;"; 
+        if(log.type.includes("Ajuste") || log.type.includes("Criado")) badgeStyle = "background:#0f4fb8;"; 
+
+        const displayOS = log.os || "---";
+        const displayMecanico = log.solicitante || "Almoxarifado";
+        const displayLinha = log.linha || "---";
+        const displayLocal = log.localAplicacao || "---";
+
+        tr.innerHTML = `
+            <td>${log.timestamp}</td>
+            <td>
+                <b>${log.itemName}</b><br>
+                <small style="color:#335ea8; font-size:11px;">Mod: ${log.itemModel || '---'}</small>
+            </td>
+            <td><span class="badge-history" style="${badgeStyle}">${log.type}</span></td>
+            <td><b>${log.delta} un.</b><br><small style="color:#666;">Saldo: ${log.finalQty}</small></td>
+            <td><mark style="background:#ffeeb3; padding:2px 4px; border-radius:4px; font-weight:bold;">${displayOS}</mark></td>
+            <td>${displayMecanico}</td>
+            <td><span style="background:#e9eef7; color:#002b73; padding:2px 6px; border-radius:4px; font-size:11px; font-weight:bold;">${displayLinha}</span></td>
+            <td><i>${displayLocal}</i></td>
+        `;
+        fragment.appendChild(tr);
+    }
+
+    if (historyDisplayedCount === 0) container.innerHTML = "";
+    container.appendChild(fragment);
+    historyDisplayedCount = nextBatchLimit;
+
+    // --- AQUI ESTÁ A INTEGRAÇÃO ---
+    // Chama o filtro após adicionar os novos elementos, 
+    // garantindo que, se o usuário estiver buscando algo,
+    // os novos itens carregados respeitem o filtro ativo.
+    if (typeof filterHistory === 'function') {
+        filterHistory();
+    }
+}
+
+function openHistoryDetailModal(log) {
+    const container = document.getElementById("logDetailsContainer");
+    if(!container) return;
+
+    container.innerHTML = `
+        <div class="log-details-item"><span>📅 Data e Horário</span><p>${log.timestamp}</p></div>
+        <div class="log-details-item"><span>📦 Insumo Solicitado</span><p>${log.itemName} (ID: ${log.itemId})</p></div>
+        <div class="log-details-item"><span>🔹 Modelo da Peça</span><p>${log.itemModel || '---'}</p></div>
+        <div class="log-details-item"><span>⚙️ Tipo de Movimentação</span><p>${log.type}</p></div>
+        <div class="log-details-item"><span>📊 Volume Alterado</span><p>${log.delta} unidades</p></div>
+        <div class="log-details-item"><span>📉 Saldo Restante em Estoque</span><p>${log.finalQty} un.</p></div>
+        <div class="log-details-item" style="border-left-color: #ffcc00;"><span>🛠️ Ordem de Serviço (OS)</span><p>${log.os || 'Não Informado / Operação Interna'}</p></div>
+        <div class="log-details-item" style="border-left-color: #ffcc00;"><span>👨‍🔧 Operador / Requisitante</span><p>${log.solicitante || 'Almoxarifado / Automático'}</p></div>
+        <div class="log-details-item" style="border-left-color: #ffcc00;"><span>🏭 Linha do Setor</span><p>${log.linha || '---'}</p></div>
+        <div class="log-details-item" style="border-left-color: #ffcc00;"><span>📝 Observação da Justificativa</span><p>${log.localAplicacao || 'Nenhuma observação informada.'}</p></div>
+        <div class="log-details-item" style="border-left-color: #00b140;"><span>🔑 Autorizado por (Almoxarifado)</span><p>${log.autorizadoPor || 'Operação Direta de Sistema'}</p></div>
+    `;
+
+    document.getElementById("historyDetailModal").style.display = "flex";
+}
+
+function closeHistoryDetailModal() {
+    document.getElementById("historyDetailModal").style.display = "none";
+}
+
+function abrirStatsMecanico(nome) {
+    // Filtra todas as movimentações do histórico deste mecânico
+    const historicoDoMecanico = historyList.filter(log => log.solicitante === nome);
+    
+    // Filtra as pendentes atuais do Firebase
+    const pendentesDoMecanico = pendingApprovalsList.filter(req => req.solicitante === nome);
+    
+    // Contadores
+    const aceitas = historicoDoMecanico.filter(l => l.type.includes("Saída")).length;
+    // Busca por registros no histórico que contenham a palavra "Recusada"
+    const recusadas = historicoDoMecanico.filter(l => l.type.includes("Recusada")).length;
+    const emAberto = pendentesDoMecanico.length;
+    const totalReq = aceitas + recusadas + emAberto;
+
+    const statsContent = document.getElementById("statsContent");
+    document.getElementById("statsTitle").innerText = "Resumo: " + nome;
+    
+    statsContent.innerHTML = `
+        <div class="log-details-item"><span>Total de Solicitações</span><p>${totalReq}</p></div>
+        <div class="log-details-item" style="border-left-color: #00b140;"><span>Autorizadas (Saídas)</span><p>${aceitas}</p></div>
+        <div class="log-details-item" style="border-left-color: #d91c1c;"><span>Recusadas</span><p>${recusadas}</p></div>
+        <div class="log-details-item" style="border-left-color: #ffcc00;"><span>Aguardando Liberação</span><p>${emAberto}</p></div>
+    `;
+    
+    document.getElementById("mecanicoStatsModal").style.display = "flex";
+}
+
+function closeStatsModal() {
+    document.getElementById("mecanicoStatsModal").style.display = "none";
+}
+
+
+
+function triggerSemiAutoPurchase(id) {
+    const item = find(id);
+    if (!item || !item.contact) {
+        alert("Preencha o campo 'Contato' do fornecedor para disparar o pedido.");
+        return;
+    }
+
+    const contactStr = item.contact.trim();
+    const minQty = item.minQty || 0;
+    const doubleMinQty = minQty * 2;
+
+    if (contactStr.includes("@")) {
+        let baseBodyText = (configs.template || "")
+            .replace(/{fornecedor}/g, item.supplier || "Fornecedor")
+            .replace(/{item}/g, item.name)
+            .replace(/{modelo}/g, item.model || "---")
+            .replace(/{quantidade}/g, item.qty)
+            .replace(/{dobro_minimo}/g, doubleMinQty)
+            .replace(/\[LOGOTIPO: bimbo-logo\.png\]/g, "=================================\n      [ GRUPO BIMBO BRASIL ]\n   Almoxarifado de Manutenção\n=================================");
+
+        const subject = encodeURIComponent(`[COMPRA CRÍTICA] Reposição de Estoque Bimbo - ${item.name}`);
+        const body = encodeURIComponent(baseBodyText);
+        const cc = encodeURIComponent((configs.buyerEmail || "").trim());
+        
+        window.location.href = `mailto:${contactStr}?cc=${cc}&subject=${subject}&body=${body}`;
+    } else {
+        let cleanPhone = contactStr.replace(/\D/g, '');
+        if (cleanPhone.length === 10 || cleanPhone.length === 11) cleanPhone = "55" + cleanPhone;
+
+        let whatsappText = (configs.whatsappTemplate || "")
+            .replace(/{fornecedor}/g, item.supplier || "Fornecedor")
+            .replace(/{item}/g, item.name)
+            .replace(/{modelo}/g, item.model || "---")
+            .replace(/{quantidade}/g, item.qty)
+            .replace(/{dobro_minimo}/g, doubleMinQty);
+
+        window.open(`https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(whatsappText)}`, '_blank');
+    }
+}
+
+function processPendingFirebaseUpdate(id, initialQty) {
+    if (pendingUpdates[id].timeout) clearTimeout(pendingUpdates[id].timeout);
+
+    pendingUpdates[id].timeout = setTimeout(() => {
+        const finalQty = pendingUpdates[id].currentQty;
+        const totalDelta = finalQty - initialQty;
+
+        if (totalDelta !== 0) {
+            window.fb.update(window.fb.ref(window.fb.db, 'estoque/' + id), { qty: finalQty })
+                .then(() => {
+                    showToast();
+                    const typeStr = totalDelta > 0 ? "Entrada (Lote)" : "Saída (Lote)";
+                    logToHistory(id, typeStr, Math.abs(totalDelta), finalQty);
+                    delete pendingUpdates[id];
+                });
+        } else {
+            delete pendingUpdates[id];
+        }
+    }, 800);
+}
+
+function updateSingleCardUI(id) {
+    const item = find(id);
+    if (!item) return;
+
+    const card = document.getElementById(`card-item-${id}`);
+    if (card) {
+        const nameEl = card.querySelector('.item-name');
+        const brandEl = card.querySelector('.brand-val');
+        const modelEl = card.querySelector('.model-val');
+        const supplierEl = card.querySelector('.supplier-val');
+        const contactEl = card.querySelector('.contact-val');
+        const locationEl = card.querySelector('.location-val');
+        const minQtyEl = card.querySelector('.min-qty-val');
+        const label = document.getElementById(`qty-val-${id}`);
+        const mecanicoLbl = document.getElementById(`mecanico-qty-lbl-${id}`);
+
+        if (nameEl) nameEl.innerText = item.name || '';
+        if (brandEl) brandEl.innerText = item.brand || '---';
+        if (modelEl) modelEl.innerText = item.model || '---';
+        if (supplierEl) supplierEl.innerText = item.supplier || '---';
+        if (contactEl) contactEl.innerText = item.contact || '---';
+        if (locationEl) locationEl.innerText = item.location || '---';
+        if (minQtyEl) minQtyEl.innerText = item.minQty || 0;
+        if (label) label.innerText = item.qty;
+        if (mecanicoLbl) mecanicoLbl.innerText = `Qtd Disponível: ${item.qty} un.`;
+
+        const btnReq = card.querySelector('.btn-mecanico-requisitar');
+        if(btnReq) {
+            if(item.qty === 0) {
+                btnReq.innerText = "❌ Indisponível";
+                btnReq.disabled = true;
+            } else {
+                btnReq.innerText = "📥 Solicitar Material";
+                btnReq.disabled = false;
+            }
+        }
+
+        const statusEl = card.querySelector('.status-badge-el');
+        if (statusEl) {
+            const minQty = item.minQty || 0;
+            if (item.qty === 0) {
+                statusEl.innerHTML = `❌ Estoque Zerado`;
+                statusEl.style.color = '#ff4d4d';
+            } else if (minQty > 0 && item.qty < minQty) {
+                statusEl.innerHTML = `⚠️ Abaixo do Mínimo`;
+                statusEl.style.color = '#ffcc00';
+            } else {
+                statusEl.innerHTML = `✔️ Controle OK`;
+                statusEl.style.color = '#00b140';
+            }
+        }
+    }
+}
+
+function changeQty(id, v) {   
+    const item = find(id); 
+    if(!item) return;
+    
+    // Se não houver buffer, iniciamos registrando o valor original
+    if (!bufferMudancas[id]) {
+        bufferMudancas[id] = {
+            qtdInicial: item.qty,
+            qtdFinal: item.qty
+        };
+    }
+
+    // Apenas calculamos o novo valor dentro do buffer, sem tocar no item.qty original
+    let novaQtd = bufferMudancas[id].qtdFinal + v;
+    if(novaQtd < 0) novaQtd = 0;    
+    bufferMudancas[id].qtdFinal = novaQtd;
+
+    // Atualizamos o visor (display) com o valor do buffer, mas o 'item' original continua com o valor antigo
+    const label = document.getElementById(`qty-val-${id}`);
+    if (label) label.innerText = novaQtd;
+
+    clearTimeout(timerJustificativa);
+    timerJustificativa = setTimeout(() => {
+        if (bufferMudancas[id].qtdFinal !== bufferMudancas[id].qtdInicial) {
+            pendingAction = { 
+                itemId: id, 
+                amount: Math.abs(bufferMudancas[id].qtdFinal - bufferMudancas[id].qtdInicial),
+                type: bufferMudancas[id].qtdFinal > bufferMudancas[id].qtdInicial ? 'Entrada' : 'Saída',
+                novaQuantidade: bufferMudancas[id].qtdFinal 
+            };
+            
+            document.getElementById('justificativaModal').style.display = 'flex';
+        }
+        delete bufferMudancas[id];
+    }, 1000); 
+}
+
+function addAmount(id){    
+    const amount = parseInt(prompt("Quantidade para adicionar:")); 
+    if(isNaN(amount)||amount<=0) return;    
+    pendingAction = { itemId: id, amount: amount, type: 'Entrada' };
+    document.getElementById('justificativaModal').style.display = 'flex';
+}
+
+function removeAmount(id){    
+    const amount = parseInt(prompt("Quantidade para retirar:")); 
+    if(isNaN(amount)||amount<=0) return;    
+    pendingAction = { itemId: id, amount: amount, type: 'Saída' };
+    document.getElementById('justificativaModal').style.display = 'flex';
+}
+
+function confirmarAlteracaoEstoque() {
+    // Proteção: impede execução se não houver uma ação pendente válida
+    if (!pendingAction || !pendingAction.itemId) return;
+
+    const { itemId, amount, type, novaQuantidade } = pendingAction;
+    const item = find(itemId);
+    if (!item) return;
+
+    const motivo = document.getElementById('selectMotivo').value;
+    const obs = document.getElementById('obsJustificativa').value;
+
+    const qtdParaSalvar = (novaQuantidade !== undefined) ? novaQuantidade : 
+                          (type === 'Entrada' ? item.qty + amount : item.qty - amount);
+
+    window.fb.update(window.fb.ref(window.fb.db, 'estoque/' + itemId), { qty: qtdParaSalvar })
+    .then(() => {
+        item.qty = qtdParaSalvar; 
+        
+        //lastFilteredLength = 0; 
+        applyFilterAndSort();   
+        preCalculatedTotalsAndCart();
+        
+        logToHistory(itemId, `${type}: ${motivo}`, amount, qtdParaSalvar, "Almoxarifado", "---", obs);
+        
+        // Finalização com limpeza completa
+        finalizarAcao();
+        showToast("Sucesso!", "Estoque atualizado.");
+    })
+    .catch((error) => {
+        console.error("Erro ao atualizar estoque:", error);
+        // Opcional: Avisar o usuário que algo deu errado
+        alert("Erro ao salvar no banco de dados. Tente novamente.");
+    });
+}
+
+// Função auxiliar para centralizar a limpeza
+function finalizarAcao() {
+    pendingAction = null; 
+    document.getElementById('justificativaModal').style.display = 'none';
+    document.getElementById('obsJustificativa').value = "";
+    document.getElementById('selectMotivo').selectedIndex = 0; // Volta para o primeiro item (opcional)
+}
+
+
+function logToHistory(itemId, type, delta, finalQty, solicitanteName = "", osNum = "", localApp = "", autorizadoPor = "") {
+    // Sobrecarga para aceitar o parâmetro 'linha' na assinatura expandida
+    let linhaSetor = "---";
+    if (arguments.length >= 9) {
+        linhaSetor = arguments[8];
+    }
+
+    const item = find(itemId);
+    const itemName = item ? item.name : `Item ${itemId}`;
+    const itemModel = item && item.model ? item.model : "---";
+    const now = new Date();
+    
+    const logData = {
+        timestamp: now.toLocaleString("pt-BR"),
+        numericTimestamp: now.getTime(),
+        itemId: itemId,
+        itemName: itemName,
+        itemModel: itemModel,
+        type: type,
+        delta: delta,
+        finalQty: finalQty,
+        solicitante: solicitanteName || "Almoxarifado", 
+        os: osNum || "---",
+        linha: linhaSetor,
+        localAplicacao: localApp || "---",
+        autorizadoPor: autorizadoPor || "Almoxarifado (Direto)"
+    };
+    
+    window.fb.push(window.fb.ref(window.fb.db, 'historico/'), logData).then(() => {
+        cleanOldHistory();
+    });
+}
+
+function cleanOldHistory() {
+    const fourteenDaysAgo = Date.now() - (14 * 24 * 60 * 60 * 1000);
+    const historyRef = window.fb.ref(window.fb.db, 'historico/');
+    
+    window.fb.onValue(window.fb.query(historyRef, window.fb.orderByKey()), (snapshot) => {
+        const data = snapshot.val();
+        if (!data) return;
+        
+        let updates = {};
+        let needDelete = false;
+        
+        Object.keys(data).forEach(key => {
+            const log = data[key];
+            if (log.numericTimestamp && log.numericTimestamp < fourteenDaysAgo) {
+                updates[key] = null;
+                needDelete = true;
+            }
+        });
+        
+        if (needDelete) { window.fb.update(historyRef, updates); }
+    }, { onlyOnce: true });
+}
+
+function openItemModal() {
+    document.getElementById("modalTitle").innerText = "Novo Item";
+    document.getElementById("modalItemId").value = "";
+    document.getElementById("modalName").value = "";
+    document.getElementById("modalBrand").value = "";
+    document.getElementById("modalModel").value = "";
+    document.getElementById("modalSupplier").value = "";
+    document.getElementById("modalContact").value = "";
+    document.getElementById("modalLocation").value = "";
+    document.getElementById("modalMinQty").value = "";
+    document.getElementById("itemModal").style.display = "flex";
+}
+
+function openRenameModal(id) {
+    const item = find(id); if(!item) return;
+    document.getElementById("modalTitle").innerText = "Editar Cadastro do Item";
+    document.getElementById("modalItemId").value = id;
+    document.getElementById("modalName").value = item.name || "";
+    document.getElementById("modalBrand").value = item.brand || "";
+    document.getElementById("modalModel").value = item.model || "";
+    document.getElementById("modalSupplier").value = item.supplier || "";
+    document.getElementById("modalContact").value = item.contact || "";
+    document.getElementById("modalLocation").value = item.location || "";
+    document.getElementById("modalMinQty").value = item.minQty || 0;
+    document.getElementById("itemModal").style.display = "flex";
+}
+
+
+
+
+
+function deleteItem(id){    
+    const item = find(id); if(!item) return;
+    if(!confirm(`Excluir "${item.name}" ?`)) return;    
+    
+    const nameBackup = item.name;
+    const modelBackup = item.model || "---";
+
+    window.fb.remove(window.fb.ref(window.fb.db, 'estoque/' + id)).then(() => {
+        showToast();
+        const now = new Date();
+        const logData = {
+            timestamp: now.toLocaleString("pt-BR"),
+            numericTimestamp: now.getTime(),
+            itemId: id,
+            itemName: nameBackup,
+            itemModel: modelBackup,
+            type: "Ajuste (Exclusão)",
+            delta: 0,
+            finalQty: 0
+        };
+        lastFilteredLength = 0;
+        window.fb.push(window.fb.ref(window.fb.db, 'historico/'), logData);
+    });
+}
+
+function updateData(newItemsArray) {
+    items = newItemsArray;
+    preCalculatedTotalsAndCart();
+    applyFilterAndSort();
+}
+
+
+function init() {
+    if (initialized) return;
+    initialized = true;
+    
+    applyViewModeRules();
+
+    window.fb.onValue(window.fb.ref(window.fb.db, 'mecanicos/'), (snapshot) => {
+        const data = snapshot.val();
+        if (!data) { 
+            mecanicosList = []; 
+        } else { 
+            mecanicosList = Object.values(data);          
+        }
+           renderMecanicos();
+    });
+
+    window.fb.onValue(window.fb.ref(window.fb.db, 'estoque/'), (snapshot) => {
+        const data = snapshot.val();
+        if (!data) { items = []; } 
+        else { items = Object.values(data); }
+        updateData(items);
+    });
+
+    window.fb.onValue(window.fb.ref(window.fb.db, 'requisicoes_pendentes/'), (snapshot) => {
+        const data = snapshot.val();
+        if (!data) { pendingApprovalsList = []; } 
+        else { 
+            pendingApprovalsList = Object.keys(data).map(key => ({ _key: key, ...data[key] }));
+            pendingApprovalsList.sort((a,b) => b.numericTimestamp - a.numericTimestamp);
+        }
+        
+        const badge = document.getElementById("approvalBadge");
+        if(badge) badge.innerText = pendingApprovalsList.length;
+
+        if (currentActiveTab === 'approvals' && getUserRole() !== "user") {
+            renderApprovalsTable();
+        }
+    });
+
+    if (getUserRole() !== "user") {
+        window.fb.onValue(window.fb.ref(window.fb.db, 'config/'), (snapshot) => {
+            const data = snapshot.val();
+            configs = data || {};
+            
+            if(!configs.buyerEmail) configs.buyerEmail = "almoxarifado.bimbo@gmail.com";
+            if(!configs.template) configs.template = "[LOGOTIPO: bimbo-logo.png]\n\nPrezado {fornecedor},\n\nIdentificamos que o item [{item} - {modelo}] atingiu o nível crítico em nosso estoque.\nSolicitamos o fornecimento de orçamento para a reposição urgente de {dobro_minimo} unidades.\n\nAtenciosamente,\nAlmoxarifado Grupo Bimbo Brasil.";
+            if(!configs.whatsappTemplate) configs.whatsappTemplate = "*Aviso de Compra - Almoxarifado Bimbo*\n\nOlá {fornecedor}, precisamos formalizar uma solicitação urgente de cotação para o item:\n📦 *{item}*\n🔹 *Modelo:* {modelo}\n📉 *Estoque Atual:* {quantidade} unidades\n🛒 *Quantidade do Pedido (2x Mínimo):* {dobro_minimo} unidades.\n\nPor favor, nos envie a proposta comercial o quanto antes. Obrigado!";
+            
+            const cEmail = document.getElementById("cfgBuyerEmail");
+            const cTemplate = document.getElementById("cfgEmailTemplate");
+            const cWha = document.getElementById("cfgWhatsappTemplate");
+
+            if(cEmail) cEmail.value = configs.buyerEmail;
+            if(cTemplate) cTemplate.value = configs.template;
+            if(cWha) cWha.value = configs.whatsappTemplate;
+        });
+
+        const historyRef = window.fb.ref(window.fb.db, 'historico/');
+        const optimizedHistoryQuery = window.fb.query(historyRef, window.fb.orderByKey(), window.fb.limitToLast(500));
+
+        window.fb.onValue(optimizedHistoryQuery, (snapshot) => {
+            const data = snapshot.val();
+            if (!data) { historyList = []; } 
+            else { historyList = Object.values(data); historyList.reverse(); }
+            if (currentActiveTab === 'history') { historyDisplayedCount = 0; loadMoreHistory(); }
+        });
+    }
+
+    const modalOverlay = document.getElementById("itemModal");
+    if (modalOverlay) { modalOverlay.addEventListener("click", function(e) { if(e.target === this) closeItemModal(); }); }
+    
+    const reqOverlay = document.getElementById("requisitionModal");
+    if (reqOverlay) { reqOverlay.addEventListener("click", function(e) { if(e.target === this) closeRequisitionModal(); }); }
+
+    const detOverlay = document.getElementById("historyDetailModal");
+    if (detOverlay) { detOverlay.addEventListener("click", function(e) { if(e.target === this) closeHistoryDetailModal(); }); }
+
+
+    const sEl = document.getElementById("search");
+    const soEl = document.getElementById("sort");
+    const fEl = document.getElementById("filter");
+    const sCartEl = document.getElementById("searchCart");
+
+    if(sEl) sEl.addEventListener("input", () => { lastFilteredLength = 0; applyFilterAndSort(); });
+    if(soEl) soEl.addEventListener("change", () => { lastFilteredLength = 0; applyFilterAndSort(); });
+    if(fEl) fEl.addEventListener("change", () => { lastFilteredLength = 0; applyFilterAndSort(); });
+    if(sCartEl) sCartEl.addEventListener("input", preCalculatedTotalsAndCart);
+}
+
+
+
+
+</script>
+</body>
+</html>
+
+
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
