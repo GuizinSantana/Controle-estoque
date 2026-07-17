@@ -219,42 +219,27 @@ if (searchHistoryInput) {
 }
 
 window.filterMechanics = function() {
-    const searchTerm = document.getElementById("searchMechanicInput").value.toLowerCase();
-    const container = document.getElementById("mecanicosContainer");
+    const input = document.getElementById("searchMechanicInput");
+    const filter = input.value.toLowerCase();
+    const tableBody = document.getElementById("mecanicosContainer");
+    const rows = tableBody.getElementsByTagName("tr");
 
-    // NOTA: Certifique-se de que 'mechanicList' é o nome da variável que guarda seus dados. 
-    // Se o nome for diferente no seu código, troque 'mechanicList' abaixo pelo nome correto.
-    const filteredList = mechanicList.filter(m => {
-        // Concatenamos os campos que você deseja pesquisar
-        const text = `${m.nome} ${m.registro} ${m.supervisor}`.toLowerCase();
-        return text.includes(searchTerm);
-    });
+    for (let i = 0; i < rows.length; i++) {
+        // Verifica se a linha tem colunas suficientes para não dar erro na mensagem de "Nenhum cadastrado"
+        const cells = rows[i].getElementsByTagName("td");
+        if (cells.length < 3) continue; 
+        
+        // Coluna 0: Nome, Coluna 2: Supervisor
+        const nome = cells[0].textContent.toLowerCase();
+        const supervisor = cells[2].textContent.toLowerCase();
 
-    container.innerHTML = ""; // Limpa a tabela
-
-    if (filteredList.length === 0) {
-        container.innerHTML = '<tr><td colspan="5" style="text-align:center;">Nenhum mecânico encontrado.</td></tr>';
-        return;
+        // Verifica se o termo de busca está no nome OU no supervisor
+        if (nome.includes(filter) || supervisor.includes(filter)) {
+            rows[i].style.display = "";
+        } else {
+            rows[i].style.display = "none";
+        }
     }
-
-    const fragment = document.createDocumentFragment();
-
-    filteredList.forEach(m => {
-        const tr = document.createElement("tr");
-        // Ajuste os campos abaixo conforme as colunas da sua tabela
-        tr.innerHTML = `
-            <td>${m.nome}</td>
-            <td>${m.registro}</td>
-            <td>${m.supervisor}</td>
-            <td>${m.status}</td>
-            <td>
-                <button onclick="editMecanico('${m.id}')">Editar</button>
-            </td>
-        `;
-        fragment.appendChild(tr);
-    });
-
-    container.appendChild(fragment);
 };
 
     </script>
@@ -1911,29 +1896,48 @@ function logToHistory(itemId, type, delta, finalQty, solicitanteName = "", osNum
     });
 }
 
-function cleanOldHistory() {
+async function cleanOldHistory() {
     const fourteenDaysAgo = Date.now() - (14 * 24 * 60 * 60 * 1000);
     const historyRef = window.fb.ref(window.fb.db, 'historico/');
     
-    window.fb.onValue(window.fb.query(historyRef, window.fb.orderByKey()), (snapshot) => {
-        const data = snapshot.val();
-        if (!data) return;
+    console.log("Iniciando limpeza de histórico anterior a:", new Date(fourteenDaysAgo).toLocaleString());
+
+    try {
+        // Busca os dados uma única vez
+        const snapshot = await window.fb.get(historyRef);
         
+        if (!snapshot.exists()) {
+            console.log("Nenhum dado encontrado no histórico.");
+            return;
+        }
+
+        const data = snapshot.val();
         let updates = {};
         let needDelete = false;
+        let count = 0;
         
         Object.keys(data).forEach(key => {
             const log = data[key];
-            if (log.numericTimestamp && log.numericTimestamp < fourteenDaysAgo) {
-                updates[key] = null;
+            const logTime = Number(log.numericTimestamp); // Garante que é número
+            
+            // Verifica se o timestamp existe e se é menor que o limite
+            if (logTime && logTime < fourteenDaysAgo) {
+                updates[key] = null; // No Firebase, definir como null deleta o nó
                 needDelete = true;
+                count++;
             }
         });
         
-        if (needDelete) { window.fb.update(historyRef, updates); }
-    }, { onlyOnce: true });
+        if (needDelete) {
+            await window.fb.update(historyRef, updates);
+            console.log(`Sucesso: ${count} itens antigos foram removidos.`);
+        } else {
+            console.log("Nenhum item antigo encontrado para remover.");
+        }
+    } catch (error) {
+        console.error("Erro crítico ao tentar limpar o histórico:", error);
+    }
 }
-
 function openItemModal() {
     document.getElementById("modalTitle").innerText = "Novo Item";
     document.getElementById("modalItemId").value = "";
