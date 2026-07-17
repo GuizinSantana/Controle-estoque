@@ -171,22 +171,49 @@ window.addEventListener("scroll", () => {
 
 window.filterHistory = function() {
     const searchTerm = searchHistoryInput.value.toLowerCase();
-    const rows = document.querySelectorAll("#historyContainer tr");
-
-    rows.forEach(row => {
-        // Pega todo o texto da linha e converte para minúsculo
-        const rowText = row.innerText.toLowerCase();
-        
-        // Se o termo de busca estiver contido no texto da linha, exibe; senão, esconde
-        if (rowText.includes(searchTerm)) {
-            row.style.display = "";
-        } else {
-            row.style.display = "none";
-        }
+    const container = document.getElementById("historyContainer");
+    
+    // 1. Filtra a lista completa (historyList) em vez de olhar a tabela
+    const filteredList = historyList.filter(log => {
+        // Concatenamos os campos principais para busca
+        const text = `${log.itemName} ${log.os} ${log.solicitante} ${log.itemModel || ''} ${log.type}`.toLowerCase();
+        return text.includes(searchTerm);
     });
-}
 
-// Adiciona o evento de digitação (input) para filtrar em tempo real
+    // 2. Limpa a tabela atual
+    container.innerHTML = "";
+    
+    // 3. Renderiza apenas os itens filtrados
+    const fragment = document.createDocumentFragment();
+    
+    filteredList.forEach(log => {
+        const tr = document.createElement("tr");
+        tr.onclick = () => openHistoryDetailModal(log);
+
+        let badgeStyle = "background:#00b140;"; 
+        if(log.type.includes("Saída") || log.type.includes("Exclusão")) badgeStyle = "background:#d91c1c;"; 
+        if(log.type.includes("Ajuste") || log.type.includes("Criado")) badgeStyle = "background:#0f4fb8;"; 
+
+        tr.innerHTML = `
+            <td>${log.timestamp}</td>
+            <td>
+                <b>${log.itemName}</b><br>
+                <small style="color:#335ea8; font-size:11px;">Mod: ${log.itemModel || '---'}</small>
+            </td>
+            <td><span class="badge-history" style="${badgeStyle}">${log.type}</span></td>
+            <td><b>${log.delta} un.</b><br><small style="color:#666;">Saldo: ${log.finalQty}</small></td>
+            <td><mark style="background:#ffeeb3; padding:2px 4px; border-radius:4px; font-weight:bold;">${log.os || "---"}</mark></td>
+            <td>${log.solicitante || "Almoxarifado"}</td>
+            <td><span style="background:#e9eef7; color:#002b73; padding:2px 6px; border-radius:4px; font-size:11px; font-weight:bold;">${log.linha || "---"}</span></td>
+            <td><i>${log.localAplicacao || "---"}</i></td>
+        `;
+        fragment.appendChild(tr);
+    });
+
+    container.appendChild(fragment);
+};
+
+// Mantém o ouvinte de evento
 if (searchHistoryInput) {
     searchHistoryInput.addEventListener("input", filterHistory);
 }
