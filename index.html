@@ -219,27 +219,42 @@ if (searchHistoryInput) {
 }
 
 window.filterMechanics = function() {
-    const input = document.getElementById("searchMechanicInput");
-    const filter = input.value.toLowerCase();
-    const tableBody = document.getElementById("mecanicosContainer");
-    const rows = tableBody.getElementsByTagName("tr");
+    const searchTerm = document.getElementById("searchMechanicInput").value.toLowerCase();
+    const container = document.getElementById("mecanicosContainer");
 
-    for (let i = 0; i < rows.length; i++) {
-        // Verifica se a linha tem colunas suficientes para não dar erro na mensagem de "Nenhum cadastrado"
-        const cells = rows[i].getElementsByTagName("td");
-        if (cells.length < 3) continue; 
-        
-        // Coluna 0: Nome, Coluna 2: Supervisor
-        const nome = cells[0].textContent.toLowerCase();
-        const supervisor = cells[2].textContent.toLowerCase();
+    // NOTA: Certifique-se de que 'mechanicList' é o nome da variável que guarda seus dados. 
+    // Se o nome for diferente no seu código, troque 'mechanicList' abaixo pelo nome correto.
+    const filteredList = mechanicList.filter(m => {
+        // Concatenamos os campos que você deseja pesquisar
+        const text = `${m.nome} ${m.registro} ${m.supervisor}`.toLowerCase();
+        return text.includes(searchTerm);
+    });
 
-        // Verifica se o termo de busca está no nome OU no supervisor
-        if (nome.includes(filter) || supervisor.includes(filter)) {
-            rows[i].style.display = "";
-        } else {
-            rows[i].style.display = "none";
-        }
+    container.innerHTML = ""; // Limpa a tabela
+
+    if (filteredList.length === 0) {
+        container.innerHTML = '<tr><td colspan="5" style="text-align:center;">Nenhum mecânico encontrado.</td></tr>';
+        return;
     }
+
+    const fragment = document.createDocumentFragment();
+
+    filteredList.forEach(m => {
+        const tr = document.createElement("tr");
+        // Ajuste os campos abaixo conforme as colunas da sua tabela
+        tr.innerHTML = `
+            <td>${m.nome}</td>
+            <td>${m.registro}</td>
+            <td>${m.supervisor}</td>
+            <td>${m.status}</td>
+            <td>
+                <button onclick="editMecanico('${m.id}')">Editar</button>
+            </td>
+        `;
+        fragment.appendChild(tr);
+    });
+
+    container.appendChild(fragment);
 };
 
     </script>
