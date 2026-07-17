@@ -1,7 +1,3 @@
-
-
-
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -194,6 +190,30 @@ window.filterHistory = function() {
 if (searchHistoryInput) {
     searchHistoryInput.addEventListener("input", filterHistory);
 }
+
+window.filterMechanics = function() {
+    const input = document.getElementById("searchMechanicInput");
+    const filter = input.value.toLowerCase();
+    const tableBody = document.getElementById("mecanicosContainer");
+    const rows = tableBody.getElementsByTagName("tr");
+
+    for (let i = 0; i < rows.length; i++) {
+        // Verifica se a linha tem colunas suficientes para não dar erro na mensagem de "Nenhum cadastrado"
+        const cells = rows[i].getElementsByTagName("td");
+        if (cells.length < 3) continue; 
+        
+        // Coluna 0: Nome, Coluna 2: Supervisor
+        const nome = cells[0].textContent.toLowerCase();
+        const supervisor = cells[2].textContent.toLowerCase();
+
+        // Verifica se o termo de busca está no nome OU no supervisor
+        if (nome.includes(filter) || supervisor.includes(filter)) {
+            rows[i].style.display = "";
+        } else {
+            rows[i].style.display = "none";
+        }
+    }
+};
 
     </script>
 
@@ -617,6 +637,7 @@ body.mecanico-view .delete-item { display: none !important; }
         </div>
         <div class="sticky-controls-wrapper">
             <div class="top-bar">
+		    <input type="text" id="searchMechanicInput" placeholder="🔍 Pesquisar por mecânico ou supervisor..." onkeyup="filterMechanics()" style="padding: 8px; border-radius: 4px; border: 1px solid #ccc; width: 300px;">
                 <!-- Botão com a classe padrão do sistema -->
                 <button id="addItemBtn" onclick="openMecanicoModal()">+ Novo Mecânico</button>
             </div>
